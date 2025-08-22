@@ -1,0 +1,100 @@
+# registries/actions.yaml
+version: 1
+
+categories:
+  IO:        "Input/Output of data or files"
+  TRANSFORM: "Pure transformations or computations"
+  DECISION:  "Condition evaluation and routing"
+  QUALITY:   "Validation, linting, testing"
+  CONTROL:   "Flow control, waiting, scheduling"
+  COMM:      "Notifications, logging, reporting"
+  STATE:     "Persistence, snapshots, migrations"
+  SECURITY:  "Security checks, policy enforcement"
+
+diagram_style:
+  IO:        { shape: "process", badge: "download" }
+  TRANSFORM: { shape: "process", badge: "gear" }
+  DECISION:  { shape: "rhombus", badge: "branch" }
+  QUALITY:   { shape: "process", badge: "check" }
+  CONTROL:   { shape: "process", badge: "clock" }
+  COMM:      { shape: "process", badge: "message" }
+  STATE:     { shape: "process", badge: "database" }
+  SECURITY:  { shape: "process", badge: "shield" }
+
+actions:
+  - id: import
+    label: Import
+    category: IO
+    description: Ingest external files or data into the working set.
+    synonyms: [load, read, fetch, open]
+    notes: "Opposite of export; should be side‑effect free aside from local copies."
+
+  - id: export
+    label: Export
+    category: IO
+    description: Emit artifacts from models (e.g., YAML/JSON/MD/Draw.io).
+    synonyms: [write, emit, save]
+
+  - id: parse
+    label: Parse
+    category: TRANSFORM
+    description: Convert structured/unstructured text into APF models.
+    synonyms: [ingest, tokenize]
+
+  - id: normalize
+    label: Normalize
+    category: TRANSFORM
+    description: Apply canonical vocab (actors/actions) and formatting rules.
+
+  - id: transform
+    label: Transform
+    category: TRANSFORM
+    description: Compute or reshape data without external side effects.
+
+  - id: validate
+    label: Validate
+    category: QUALITY
+    description: Run schema and semantic checks; produce diagnostics.
+
+  - id: decide
+    label: Decide
+    category: DECISION
+    description: Evaluate conditions and select a branch.
+    notes: "Typically represented by a diamond in diagrams."
+
+  - id: sequence
+    label: Sequence
+    category: TRANSFORM
+    description: Compute step ordering and renumber maps.
+    synonyms: [renumber]
+
+  - id: snapshot
+    label: Snapshot
+    category: STATE
+    description: Persist a content‑addressed copy of inputs/outputs for recovery.
+
+  - id: transact
+    label: Transact
+    category: STATE
+    description: Apply a set of changes atomically with commit/rollback semantics.
+
+  - id: notify
+    label: Notify
+    category: COMM
+    description: Send user‑visible messages (UI toast, email, log events).
+    synonyms: [report, alert]
+
+  - id: render
+    label: Render
+    category: IO
+    description: Render human‑readable outputs (Markdown, PDF, diagrams).
+
+  - id: wait
+    label: Wait
+    category: CONTROL
+    description: Delay until a time or condition is met (debounce/throttle).
+
+  - id: archive
+    label: Archive
+    category: STATE
+    description: Move artifacts to long‑term storage with retention policies.
