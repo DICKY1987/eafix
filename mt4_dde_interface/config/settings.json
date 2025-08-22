@@ -1,0 +1,17 @@
+{
+    "dde_server": "MT4",
+    "update_interval": 0.1,
+    "buffer_size": 1000,
+    "ui_refresh_rate": 500,
+    "default_symbols": ["EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD"],
+    "indicator_presets": {
+        "sma_20": {"type": "SMA", "period": 20},
+        "sma_50": {"type": "SMA", "period": 50},
+        "ema_12": {"type": "EMA", "period": 12},
+        "ema_26": {"type": "EMA", "period": 26},
+        "rsi_14": {"type": "RSI", "period": 14},
+        "macd_standard": {"type": "MACD", "fast": 12, "slow": 26, "signal": 9},
+        "bb_20": {"type": "BollingerBands", "period": 20, "std_dev": 2},
+        "atr_14": {"type": "ATR", "period": 14}
+    }
+}

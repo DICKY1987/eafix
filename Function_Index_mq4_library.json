@@ -1,0 +1,510 @@
+{
+  "UtilitiesLibrary.mq4": [
+    {
+      "function": "ConcatenateStrings",
+      "signature": "export string ConcatenateStrings(string str1, string str2, string str3 = \"\", string str4 = \"\")",
+      "category": "String",
+      "spec_links": [
+        "mql4_string_operations_standards:string_concatenation.performance_considerations.efficient",
+        "mql4_string_operations_standards:string_concatenation.concatenation_operator"
+      ]
+    },
+    {
+      "function": "FindSubstring",
+      "signature": "export int FindSubstring(string text, string substring, int start = 0)",
+      "category": "String",
+      "spec_links": [
+        "mql4_string_operations_standards:string_functions.search_functions.StringFind"
+      ]
+    },
+    {
+      "function": "GetSubstring",
+      "signature": "export string GetSubstring(string text, int start, int length = 0)",
+      "category": "String",
+      "spec_links": [
+        "mql4_string_operations_standards:string_functions.substring.StringSubstr",
+        "mql4_string_operations_standards:bounds_checking.substring_bounds"
+      ]
+    },
+    {
+      "function": "GetStringLength",
+      "signature": "export int GetStringLength(string text)",
+      "category": "String",
+      "spec_links": [
+        "mql4_string_operations_standards:string_functions.length_functions.StringLen"
+      ]
+    },
+    {
+      "function": "TrimStringLeft",
+      "signature": "export string TrimStringLeft(string text)",
+      "category": "String",
+      "spec_links": [
+        "mql4_string_operations_standards:string_functions",
+        "mql4_string_operations_standards:bounds_checking.substring_bounds"
+      ]
+    },
+    {
+      "function": "TrimStringRight",
+      "signature": "export string TrimStringRight(string text)",
+      "category": "String",
+      "spec_links": [
+        "mql4_string_operations_standards:string_functions",
+        "mql4_string_operations_standards:bounds_checking.substring_bounds"
+      ]
+    },
+    {
+      "function": "DoubleToString",
+      "signature": "export string DoubleToString(double value, int digits)",
+      "category": "String/Conversion",
+      "spec_links": [
+        "mql4_data_conversion_standards:numeric_to_string_conversion.double_to_string",
+        "mql4_string_operations_standards:string_conversion.from_numbers.DoubleToString"
+      ]
+    },
+    {
+      "function": "StringToDouble",
+      "signature": "export double StringToDouble(string text)",
+      "category": "Conversion",
+      "spec_links": [
+        "mql4_data_conversion_standards:string_to_numeric_conversion.string_to_double"
+      ]
+    },
+    {
+      "function": "StringToInteger",
+      "signature": "export int StringToInteger(string text)",
+      "category": "Conversion",
+      "spec_links": [
+        "mql4_data_conversion_standards:string_to_numeric_conversion.string_to_integer"
+      ]
+    },
+    {
+      "function": "StringToTime",
+      "signature": "export datetime StringToTime(string text)",
+      "category": "Conversion/Datetime",
+      "spec_links": [
+        "mql4_data_conversion_standards:string_to_time.string_to_time"
+      ]
+    },
+    {
+      "function": "TimeToString",
+      "signature": "export string TimeToString(datetime time, int mode = TIME_DATE|TIME_MINUTES)",
+      "category": "Datetime/Conversion",
+      "spec_links": [
+        "mql4_data_conversion_standards:time_conversion.TimeToString",
+        "mql4_datetime_functions_standards:current_time_functions"
+      ]
+    },
+    {
+      "function": "NormalizeDouble",
+      "signature": "export double NormalizeDouble(double value, int digits)",
+      "category": "Math/Precision",
+      "spec_links": [
+        "mql4_data_conversion_standards:numeric_normalization.NormalizeDouble",
+        "mql4_math_operations_standards:precision_handling.floating_point_precision"
+      ]
+    },
+    {
+      "function": "Abs",
+      "signature": "export double Abs(double value)",
+      "category": "Math",
+      "spec_links": [
+        "mql4_math_operations_standards:precision_handling.floating_point_precision.epsilon_comparison"
+      ]
+    },
+    {
+      "function": "Ceil",
+      "signature": "export double Ceil(double value)",
+      "category": "Math/Rounding",
+      "spec_links": [
+        "mql4_math_operations_standards:rounding_functions"
+      ]
+    },
+    {
+      "function": "Floor",
+      "signature": "export double Floor(double value)",
+      "category": "Math/Rounding",
+      "spec_links": [
+        "mql4_math_operations_standards:rounding_functions"
+      ]
+    },
+    {
+      "function": "Round",
+      "signature": "export double Round(double value)",
+      "category": "Math/Rounding",
+      "spec_links": [
+        "mql4_math_operations_standards:rounding_functions"
+      ]
+    },
+    {
+      "function": "GetDayOfWeek",
+      "signature": "export int GetDayOfWeek(datetime time)",
+      "category": "Datetime",
+      "spec_links": [
+        "mql4_datetime_functions_standards:time_components",
+        "mql4_datetime_functions_standards:time_arithmetic"
+      ]
+    },
+    {
+      "function": "ShowAlert",
+      "signature": "export void ShowAlert(string message)",
+      "category": "Messaging",
+      "spec_links": [
+        "mql4_utility_functions_standards:messaging_functions.Alert"
+      ]
+    },
+    {
+      "function": "ShowComment",
+      "signature": "export void ShowComment(string message)",
+      "category": "Messaging",
+      "spec_links": [
+        "mql4_utility_functions_standards:messaging_functions.Comment"
+      ]
+    },
+    {
+      "function": "PrintMessage",
+      "signature": "export void PrintMessage(string message)",
+      "category": "Messaging",
+      "spec_links": [
+        "mql4_utility_functions_standards:messaging_functions.Print"
+      ]
+    },
+    {
+      "function": "PlaySoundFile",
+      "signature": "export void PlaySoundFile(string filename)",
+      "category": "Messaging",
+      "spec_links": [
+        "mql4_utility_functions_standards:messaging_functions.PlaySound"
+      ]
+    },
+    {
+      "function": "SleepMilliseconds",
+      "signature": "export void SleepMilliseconds()",
+      "category": "Timing",
+      "spec_links": [
+        "mql4_utility_functions_standards:timing_functions.Sleep"
+      ]
+    },
+    {
+      "function": "GetTickCount",
+      "signature": "export int GetTickCount()",
+      "category": "Timing",
+      "spec_links": [
+        "mql4_utility_functions_standards:timing_functions.GetTickCount"
+      ]
+    },
+    {
+      "function": "SendEmail",
+      "signature": "export bool SendEmail(string subject, string text)",
+      "category": "Messaging",
+      "spec_links": [
+        "mql4_utility_functions_standards:messaging_functions.SendMail"
+      ]
+    },
+    {
+      "function": "GetSymbol",
+      "signature": "export string GetSymbol()",
+      "category": "Constants",
+      "spec_links": [
+        "mql4_constants_standards:predefined_variables.symbol_and_period"
+      ]
+    },
+    {
+      "function": "GetPeriod",
+      "signature": "export int GetPeriod()",
+      "category": "Constants",
+      "spec_links": [
+        "mql4_constants_standards:predefined_variables.symbol_and_period"
+      ]
+    },
+    {
+      "function": "GetDigits",
+      "signature": "export int GetDigits()",
+      "category": "Market/Precision",
+      "spec_links": [
+        "mql4_market_info_standards:marketinfo_function",
+        "mql4_constants_standards:predefined_variables.price_precision"
+      ]
+    },
+    {
+      "function": "GetPoint",
+      "signature": "export double GetPoint()",
+      "category": "Market/Precision",
+      "spec_links": [
+        "mql4_market_info_standards:marketinfo_function",
+        "mql4_constants_standards:predefined_variables.price_precision"
+      ]
+    },
+    {
+      "function": "IsConnected",
+      "signature": "export bool IsConnected()",
+      "category": "System State",
+      "spec_links": [
+        "mql4_utility_functions_standards:system_state.IsConnected"
+      ]
+    },
+    {
+      "function": "IsTesting",
+      "signature": "export bool IsTesting()",
+      "category": "System State",
+      "spec_links": [
+        "mql4_constants_standards:predefined_variables.testing_flags"
+      ]
+    },
+    {
+      "function": "IsDemo",
+      "signature": "export bool IsDemo()",
+      "category": "System State",
+      "spec_links": [
+        "mql4_constants_standards:predefined_variables.account_environment"
+      ]
+    },
+    {
+      "function": "IsTradeAllowed",
+      "signature": "export bool IsTradeAllowed()",
+      "category": "System State",
+      "spec_links": [
+        "mql4_utility_functions_standards:trading_permission.IsTradeAllowed"
+      ]
+    }
+  ],
+  "TradingLibrary.mq4": [
+    {
+      "function": "OpenBuyOrder",
+      "signature": "export int OpenBuyOrder(string symbol, double lots, double sl, double tp, string comment = \"\", int magic = 0)",
+      "category": "Order Entry",
+      "spec_links": [
+        "mql4_market_info_standards:stop_level_validation.buy_order_validation",
+        "mql4_order_management_standards:order_iteration_patterns.modification_guidance"
+      ]
+    },
+    {
+      "function": "OpenSellOrder",
+      "signature": "export int OpenSellOrder(string symbol, double lots, double sl, double tp, string comment = \"\", int magic = 0)",
+      "category": "Order Entry",
+      "spec_links": [
+        "mql4_market_info_standards:stop_level_validation.sell_order_validation",
+        "mql4_order_management_standards:order_iteration_patterns.modification_guidance"
+      ]
+    },
+    {
+      "function": "OpenBuyLimit",
+      "signature": "export int OpenBuyLimit(string symbol, double price, double lots, double sl, double tp, string comment = \"\", int magic = 0)",
+      "category": "Order Entry",
+      "spec_links": [
+        "mql4_market_info_standards:stop_level_validation.buy_order_validation",
+        "mql4_order_management_standards:order_iteration_patterns.modification_guidance"
+      ]
+    },
+    {
+      "function": "OpenSellLimit",
+      "signature": "export int OpenSellLimit(string symbol, double price, double lots, double sl, double tp, string comment = \"\", int magic = 0)",
+      "category": "Order Entry",
+      "spec_links": [
+        "mql4_market_info_standards:stop_level_validation.sell_order_validation",
+        "mql4_order_management_standards:order_iteration_patterns.modification_guidance"
+      ]
+    },
+    {
+      "function": "ModifyOrder",
+      "signature": "export bool ModifyOrder(int ticket, double sl, double tp)",
+      "category": "Order Modify",
+      "spec_links": [
+        "mql4_order_management_standards:order_iteration_patterns.modification_guidance"
+      ]
+    },
+    {
+      "function": "CloseOrder",
+      "signature": "export bool CloseOrder(int ticket)",
+      "category": "Order Close",
+      "spec_links": [
+        "mql4_order_management_standards:order_iteration_patterns.safe_iteration_backward"
+      ]
+    },
+    {
+      "function": "DeletePendingOrder",
+      "signature": "export bool DeletePendingOrder(int ticket)",
+      "category": "Order Delete",
+      "spec_links": [
+        "mql4_order_management_standards:order_iteration_patterns.safe_iteration_backward"
+      ]
+    },
+    {
+      "function": "GetLastError",
+      "signature": "export int GetLastError()",
+      "category": "Error",
+      "spec_links": [
+        "mql4_utility_functions_standards:error_handling_functions.GetLastError"
+      ]
+    },
+    {
+      "function": "GetMACrossSignal",
+      "signature": "export int GetMACrossSignal(string symbol, int timeframe, int fastPeriod, int slowPeriod)",
+      "category": "Signals/MA",
+      "spec_links": [
+        "mql4_technical_indicators_standards:moving_average_indicators.iMA",
+        "mql4_technical_indicators_standards:parameter_validation.common_validations"
+      ]
+    },
+    {
+      "function": "GetRSISignal",
+      "signature": "export int GetRSISignal(string symbol, int timeframe, int period, int appliedPrice)",
+      "category": "Signals/RSI",
+      "spec_links": [
+        "mql4_technical_indicators_standards:oscillator_indicators.iRSI",
+        "mql4_technical_indicators_standards:parameter_validation.common_validations"
+      ]
+    },
+    {
+      "function": "GetMACDSignal",
+      "signature": "export int GetMACDSignal(string symbol, int timeframe, int fastEMA, int slowEMA, int signalSMA, int appliedPrice)",
+      "category": "Signals/MACD",
+      "spec_links": [
+        "mql4_technical_indicators_standards:oscillator_indicators.iMACD",
+        "mql4_technical_indicators_standards:parameter_validation.common_validations"
+      ]
+    },
+    {
+      "function": "GetStochasticSignal",
+      "signature": "export int GetStochasticSignal(string symbol, int timeframe, int Kperiod, int Dperiod, int slowing, int method, int priceField)",
+      "category": "Signals/Stochastic",
+      "spec_links": [
+        "mql4_technical_indicators_standards:oscillator_indicators.iStochastic",
+        "mql4_technical_indicators_standards:parameter_validation.common_validations"
+      ]
+    },
+    {
+      "function": "GetCombinedSignal",
+      "signature": "export int GetCombinedSignal(string symbol, int timeframe, int fastMA, int slowMA, int rsiPeriod)",
+      "category": "Signals/Composite",
+      "spec_links": [
+        "mql4_technical_indicators_standards:parameter_validation.common_validations",
+        "mql4_technical_indicators_standards:guidance.combine_signals"
+      ]
+    },
+    {
+      "function": "GetOrderProfit",
+      "signature": "export double GetOrderProfit(int ticket)",
+      "category": "Order Info",
+      "spec_links": [
+        "mql4_order_management_standards:financial_properties.OrderProfit"
+      ]
+    },
+    {
+      "function": "GetOrderOpenPrice",
+      "signature": "export double GetOrderOpenPrice(int ticket)",
+      "category": "Order Info",
+      "spec_links": [
+        "mql4_order_management_standards:price_properties.OrderOpenPrice"
+      ]
+    },
+    {
+      "function": "GetOrderOpenTime",
+      "signature": "export datetime GetOrderOpenTime(int ticket)",
+      "category": "Order Info",
+      "spec_links": [
+        "mql4_order_management_standards:timing_properties.OrderOpenTime"
+      ]
+    },
+    {
+      "function": "CountOpenOrders",
+      "signature": "export int CountOpenOrders(string symbol, int magic)",
+      "category": "Order Query",
+      "spec_links": [
+        "mql4_order_management_standards:order_selection_functions.OrdersTotal",
+        "mql4_order_management_standards:order_iteration_patterns.basic_iteration.active_orders_loop"
+      ]
+    }
+  ],
+  "IndicatorsLibrary.mq4": [
+    { "function": "GetMA", "signature": "export double GetMA(string symbol, int timeframe, int period, int maShift, int maMethod, int appliedPrice, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:moving_average_indicators.iMA", "mql4_technical_indicators_standards:parameter_validation.common_validations"] },
+    { "function": "GetEMA", "signature": "export double GetEMA(string symbol, int timeframe, int period, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:moving_average_indicators.iMA"] },
+    { "function": "GetSMA", "signature": "export double GetSMA(string symbol, int timeframe, int period, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:moving_average_indicators.iMA"] },
+    { "function": "GetRSI", "signature": "export double GetRSI(string symbol, int timeframe, int period, int appliedPrice, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:oscillator_indicators.iRSI", "mql4_technical_indicators_standards:parameter_validation.common_validations"] },
+    { "function": "GetStochastic", "signature": "export double GetStochastic(string symbol, int timeframe, int Kperiod, int Dperiod, int slowing, int method, int priceField, int mode, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:oscillator_indicators.iStochastic"] },
+    { "function": "GetMACD", "signature": "export double GetMACD(string symbol, int timeframe, int fastEMA, int slowEMA, int signalSMA, int appliedPrice, int mode, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:oscillator_indicators.iMACD"] },
+    { "function": "GetSAR", "signature": "export double GetSAR(string symbol, int timeframe, double step, double maximum, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:built_in_indicators"] },
+    { "function": "GetADX", "signature": "export double GetADX(string symbol, int timeframe, int period, int priceField, int mode, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:built_in_indicators"] },
+    { "function": "GetATR", "signature": "export double GetATR(string symbol, int timeframe, int period, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:built_in_indicators"] },
+    { "function": "GetBollinger", "signature": "export double GetBollinger(string symbol, int timeframe, int period, double deviation, int bandsShift, int appliedPrice, int mode, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:built_in_indicators"] },
+    { "function": "GetStdDev", "signature": "export double GetStdDev(string symbol, int timeframe, int maPeriod, int maShift, int maMethod, int appliedPrice, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:built_in_indicators"] },
+    { "function": "GetVolume", "signature": "export double GetVolume(string symbol, int timeframe, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:built_in_indicators"] },
+    { "function": "GetOBV", "signature": "export double GetOBV(string symbol, int timeframe, int appliedPrice, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:built_in_indicators"] },
+    { "function": "GetMFI", "signature": "export double GetMFI(string symbol, int timeframe, int period, int appliedPrice, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:built_in_indicators"] },
+    { "function": "GetAO", "signature": "export double GetAO(string symbol, int timeframe, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:built_in_indicators"] },
+    { "function": "GetAC", "signature": "export double GetAC(string symbol, int timeframe, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:built_in_indicators"] },
+    { "function": "GetAlligator", "signature": "export double GetAlligator(string symbol, int timeframe, int jawPeriod, int teethPeriod, int lipsPeriod, int jawShift, int teethShift, int lipsShift, int maMethod, int appliedPrice, int mode, int shift)", "category": "Indicator", "spec_links": ["mql4_technical_indicators_standards:built_in_indicators"] },
+    { "function": "GetCustomIndicator", "signature": "export double GetCustomIndicator(string symbol, int timeframe, string name, int mode, int shift, ...)", "category": "Custom Indicator", "spec_links": ["mql4_custom_indicators_standards:icustom_usage", "mql4_custom_indicators_standards:indicator_buffer_management"] },
+    { "function": "GetOpen", "signature": "export double GetOpen(string symbol, int timeframe, int shift)", "category": "Timeseries", "spec_links": ["mql4_technical_indicators_standards:timeseries_access", "mql4_book:TimeSeries"] },
+    { "function": "GetHigh", "signature": "export double GetHigh(string symbol, int timeframe, int shift)", "category": "Timeseries", "spec_links": ["mql4_technical_indicators_standards:timeseries_access", "mql4_book:TimeSeries"] },
+    { "function": "GetLow", "signature": "export double GetLow(string symbol, int timeframe, int shift)", "category": "Timeseries", "spec_links": ["mql4_technical_indicators_standards:timeseries_access", "mql4_book:TimeSeries"] },
+    { "function": "GetClose", "signature": "export double GetClose(string symbol, int timeframe, int shift)", "category": "Timeseries", "spec_links": ["mql4_technical_indicators_standards:timeseries_access", "mql4_book:TimeSeries"] },
+    { "function": "GetTime", "signature": "export datetime GetTime(string symbol, int timeframe, int shift)", "category": "Timeseries", "spec_links": ["mql4_technical_indicators_standards:timeseries_access", "mql4_book:TimeSeries"] }
+  ],
+  "UILibrary.mq4": [
+    { "function": "CreateChart", "signature": "export long CreateChart(string symbol, int period)", "category": "UI", "spec_links": ["mql4_book:ChartOperations"] },
+    { "function": "CloseChart", "signature": "export bool CloseChart(long chartId)", "category": "UI", "spec_links": ["mql4_book:ChartOperations"] },
+    { "function": "SetChartComment", "signature": "export bool SetChartComment(long chartId, string comment)", "category": "UI/Messaging", "spec_links": ["mql4_utility_functions_standards:messaging_functions.Comment", "mql4_book:ChartOperations"] },
+    { "function": "TakeScreenshot", "signature": "export bool TakeScreenshot(long chartId, string fileName, int width, int height)", "category": "UI", "spec_links": ["mql4_book:WindowScreenShot"] },
+    { "function": "CreateButton", "signature": "export long CreateButton(string name, int x, int y, int w, int h, string text)", "category": "UI/Objects", "spec_links": ["mql4_book:ObjectCreate", "mql4_book:GraphicalObjects"] },
+    { "function": "CreateLabel", "signature": "export long CreateLabel(string name, int x, int y, string text)", "category": "UI/Objects", "spec_links": ["mql4_book:ObjectCreate", "mql4_book:GraphicalObjects"] },
+    { "function": "CreateEditBox", "signature": "export long CreateEditBox(string name, int x, int y, int w, int h)", "category": "UI/Objects", "spec_links": ["mql4_book:ObjectCreate", "mql4_book:GraphicalObjects"] },
+    { "function": "DeleteUIElement", "signature": "export bool DeleteUIElement(string name)", "category": "UI/Objects", "spec_links": ["mql4_book:ObjectsDeleteAll"] },
+    { "function": "InitializeGridLayout", "signature": "export bool InitializeGridLayout(int cols, int rows, int w, int h, int margin)", "category": "UI/Layout", "spec_links": ["mql4_book:ChartCoordinates", "mql4_book:Subwindows"] },
+    { "function": "GetGridX", "signature": "export int GetGridX(int col)", "category": "UI/Layout", "spec_links": ["mql4_book:ChartCoordinates"] },
+    { "function": "GetGridY", "signature": "export int GetGridY(int row)", "category": "UI/Layout", "spec_links": ["mql4_book:ChartCoordinates"] },
+    { "function": "GetGridWidth", "signature": "export int GetGridWidth()", "category": "UI/Layout", "spec_links": ["mql4_book:ChartCoordinates"] },
+    { "function": "GetGridHeight", "signature": "export int GetGridHeight()", "category": "UI/Layout", "spec_links": ["mql4_book:ChartCoordinates"] }
+  ],
+  "FileOperationsLibrary.mq4": [
+    { "function": "OpenTextFile", "signature": "export int OpenTextFile(string fileName, int mode)", "category": "File I/O", "spec_links": ["mql4_book:Files", "mql4_book:FileOpen"] },
+    { "function": "ReadTextLine", "signature": "export string ReadTextLine(int handle)", "category": "File I/O", "spec_links": ["mql4_book:Files", "mql4_book:FileRead"] },
+    { "function": "WriteTextLine", "signature": "export bool WriteTextLine(int handle, string line)", "category": "File I/O", "spec_links": ["mql4_book:Files", "mql4_book:FileWrite"] },
+    { "function": "CloseFile", "signature": "export void CloseFile(int handle)", "category": "File I/O", "spec_links": ["mql4_book:Files", "mql4_book:FileClose"] },
+    { "function": "OpenCSVFile", "signature": "export int OpenCSVFile(string fileName, int mode, char delimiter)", "category": "File I/O (CSV)", "spec_links": ["mql4_book:Files", "mql4_book:FileOpen"] },
+    { "function": "ReadCSVString", "signature": "export string ReadCSVString(int handle)", "category": "File I/O (CSV)", "spec_links": ["mql4_book:Files", "mql4_book:FileRead"] },
+    { "function": "ReadCSVNumber", "signature": "export double ReadCSVNumber(int handle)", "category": "File I/O (CSV)", "spec_links": ["mql4_book:Files", "mql4_book:FileRead"] },
+    { "function": "WriteCSVLine", "signature": "export bool WriteCSVLine(int handle, string field1, ...)", "category": "File I/O (CSV)", "spec_links": ["mql4_book:Files", "mql4_book:FileWrite"] },
+    { "function": "OpenBinaryFile", "signature": "export int OpenBinaryFile(string fileName, int mode)", "category": "File I/O (Binary)", "spec_links": ["mql4_book:Files", "mql4_book:FileOpen"] },
+    { "function": "ReadBinaryArray", "signature": "export int ReadBinaryArray(int handle, double &buffer[])", "category": "File I/O (Binary)", "spec_links": ["mql4_book:Files", "mql4_book:FileRead"] },
+    { "function": "WriteBinaryArray", "signature": "export int WriteBinaryArray(int handle, double &buffer[])", "category": "File I/O (Binary)", "spec_links": ["mql4_book:Files", "mql4_book:FileWrite"] },
+    { "function": "SeekFile", "signature": "export bool SeekFile(int handle, int pos, int origin)", "category": "File I/O", "spec_links": ["mql4_book:Files", "mql4_book:FileSeek"] },
+    { "function": "CreateHistoryFile", "signature": "export int CreateHistoryFile(string symbol, int timeframe)", "category": "File I/O (History)", "spec_links": ["mql4_book:Files", "mql4_book:FileOpen"] },
+    { "function": "WriteHistoryBar", "signature": "export bool WriteHistoryBar(int handle, datetime t, double o, double h, double l, double c, long v)", "category": "File I/O (History)", "spec_links": ["mql4_book:Files", "mql4_book:FileWrite"] },
+    { "function": "CloseHistoryFile", "signature": "export void CloseHistoryFile(int handle)", "category": "File I/O (History)", "spec_links": ["mql4_book:Files", "mql4_book:FileClose"] },
+    { "function": "FileExists", "signature": "export bool FileExists(string fileName)", "category": "File Ops", "spec_links": ["mql4_book:Files", "mql4_book:FileIsExist"] },
+    { "function": "DeleteFile", "signature": "export bool DeleteFile(string fileName)", "category": "File Ops", "spec_links": ["mql4_book:Files", "mql4_book:FileDelete"] },
+    { "function": "CopyFile", "signature": "export bool CopyFile(string src, string dst)", "category": "File Ops", "spec_links": ["mql4_book:Files", "mql4_book:FileOperations"] },
+    { "function": "MoveFile", "signature": "export bool MoveFile(string src, string dst)", "category": "File Ops", "spec_links": ["mql4_book:Files", "mql4_book:FileOperations"] },
+    { "function": "CreateDirectory", "signature": "export bool CreateDirectory(string path)", "category": "File Ops", "spec_links": ["mql4_book:Files", "mql4_book:FileOperations"] },
+    { "function": "GetFileSize", "signature": "export int GetFileSize(int handle)", "category": "File Ops", "spec_links": ["mql4_book:Files", "mql4_book:FileSize"] }
+  ],
+  "ErrorHandlingLibrary.mq4": [
+    { "function": "InitErrorHandling", "signature": "export bool InitErrorHandling()", "category": "Error/Init", "spec_links": ["mql4_utility_functions_standards:purpose"] },
+    { "function": "GetLastErrorCode", "signature": "export int GetLastErrorCode()", "category": "Error", "spec_links": ["mql4_utility_functions_standards:error_handling_functions.GetLastError"] },
+    { "function": "GetErrorDescription", "signature": "export string GetErrorDescription(int code)", "category": "Error", "spec_links": ["mql4_utility_functions_standards:error_handling_functions.common_error_codes"] },
+    { "function": "CheckError", "signature": "export bool CheckError()", "category": "Error", "spec_links": ["mql4_utility_functions_standards:error_handling_functions.GetLastError"] },
+    { "function": "ResetLastError", "signature": "export void ResetLastError()", "category": "Error", "spec_links": ["mql4_utility_functions_standards:error_handling_functions.GetLastError"] },
+    { "function": "SetCustomError", "signature": "export void SetCustomError(int code)", "category": "Error", "spec_links": ["mql4_utility_functions_standards:error_handling_functions.common_error_codes"] },
+    { "function": "LogError", "signature": "export void LogError(string message)", "category": "Error/Messaging", "spec_links": ["mql4_utility_functions_standards:messaging_functions.Print"] },
+    { "function": "AlertError", "signature": "export void AlertError(string message = \"\")", "category": "Error/Messaging", "spec_links": ["mql4_utility_functions_standards:messaging_functions.Alert"] },
+    { "function": "PrintError", "signature": "export void PrintError(string message = \"\")", "category": "Error/Messaging", "spec_links": ["mql4_utility_functions_standards:messaging_functions.Print"] },
+    { "function": "PlayErrorSound", "signature": "export void PlayErrorSound()", "category": "Error/Messaging", "spec_links": ["mql4_utility_functions_standards:messaging_functions.PlaySound"] },
+    { "function": "InitializeTimer", "signature": "export bool InitializeTimer(int seconds)", "category": "Events/Timer", "spec_links": ["mql4_book:Events.Timer"] },
+    { "function": "IsTimerTriggered", "signature": "export bool IsTimerTriggered()", "category": "Events/Timer", "spec_links": ["mql4_book:Events.Timer"] },
+    { "function": "StopTimer", "signature": "export void StopTimer()", "category": "Events/Timer", "spec_links": ["mql4_book:Events.Timer"] },
+    { "function": "CheckOrderError", "signature": "export bool CheckOrderError(int code)", "category": "Error/Trading", "spec_links": ["mql4_order_management_standards:order_iteration_patterns.modification_guidance", "mql4_technical_indicators_standards:parameter_validation.common_validations"] },
+    { "function": "CheckIndicatorError", "signature": "export bool CheckIndicatorError(int code)", "category": "Error/Indicators", "spec_links": ["mql4_technical_indicators_standards:parameter_validation.common_validations"] }
+  ],
+  "DataStructuresLib_FIXED.mq4": [
+    { "function": "CreateHashMap", "signature": "int CreateHashMap(int &handle[])", "category": "Data Structures", "spec_links": ["mql4_arrays_standards:dynamic_arrays.ArrayResize", "mql4_book:ClassesAndObjects"] },
+    { "function": "AddToHashMap", "signature": "bool AddToHashMap(int handle, string key, string value)", "category": "Data Structures", "spec_links": ["mql4_arrays_standards:dynamic_arrays.ArrayResize", "mql4_book:ClassesAndObjects"] },
+    { "function": "GetFromHashMap", "signature": "string GetFromHashMap(int handle, string key)", "category": "Data Structures", "spec_links": ["mql4_arrays_standards:dynamic_arrays.ArrayResize", "mql4_book:ClassesAndObjects"] },
+    { "function": "RemoveFromHashMap", "signature": "bool RemoveFromHashMap(int handle, string key)", "category": "Data Structures", "spec_links": ["mql4_arrays_standards:dynamic_arrays.ArrayResize", "mql4_book:ClassesAndObjects"] },
+    { "function": "DestroyHashMap", "signature": "void DestroyHashMap(int handle)", "category": "Data Structures", "spec_links": ["mql4_arrays_standards:dynamic_arrays.ArrayResize", "mql4_book:ClassesAndObjects"] },
+    { "function": "CreateLinkedList", "signature": "int CreateLinkedList(int &handle[])", "category": "Data Structures", "spec_links": ["mql4_arrays_standards:dynamic_arrays.ArrayResize", "mql4_book:ClassesAndObjects"] },
+    { "function": "AddToLinkedList", "signature": "bool AddToLinkedList(int handle, string value)", "category": "Data Structures", "spec_links": ["mql4_arrays_standards:dynamic_arrays.ArrayResize", "mql4_book:ClassesAndObjects"] },
+    { "function": "GetFromLinkedList", "signature": "string GetFromLinkedList(int handle, int index)", "category": "Data Structures", "spec_links": ["mql4_arrays_standards:bounds_and_indexing", "mql4_book:ClassesAndObjects"] },
+    { "function": "GetLinkedListSize", "signature": "int GetLinkedListSize(int handle)", "category": "Data Structures", "spec_links": ["mql4_arrays_standards:array_functions.ArraySize", "mql4_book:ClassesAndObjects"] },
+    { "function": "DestroyLinkedList", "signature": "void DestroyLinkedList(int handle)", "category": "Data Structures", "spec_links": ["mql4_arrays_standards:dynamic_arrays.ArrayResize", "mql4_book:ClassesAndObjects"] }
+  ]
+}

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reentry Matrix Database Mock</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .table-container {
+            background: white;
+            margin: 20px 0;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 5px;
+            text-align: left;
+            font-weight: bold;
+        }
+        td {
+            padding: 8px 5px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #e8f4f8;
+        }
+        .combination-id {
+            font-family: monospace;
+            background-color: #f0f0f0;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 10px;
+        }
+        .status-active { color: #27ae60; font-weight: bold; }
+        .status-ended { color: #e74c3c; }
+        .decision-reentry { color: #27ae60; font-weight: bold; }
+        .decision-end { color: #e74c3c; font-weight: bold; }
+        .performance-good { background-color: #d5f4e6; }
+        .performance-bad { background-color: #fadbd8; }
+        .note {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reentry Matrix Database Structure - Mock Data</h1>
+    
+    <div class="note">
+        <strong>Note:</strong> This shows the core database tables that store the trade combination matrix. Each symbol (EURUSD, GBPUSD, etc.) has its own set of per-symbol tables.
+    </div>
+
+    <!-- COMBINATIONS TABLE -->
+    <div class="table-container">
+        <h2>📊 combinations - Core Matrix Dimensions</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>symbol</th>
+                    <th>signal_type</th>
+                    <th>time_category</th>
+                    <th>outcome</th>
+                    <th>context</th>
+                    <th>generation</th>
+                    <th>combination_id</th>
+                    <th>created_at</th>
+                    <th>updated_at</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>EURUSD</td>
+                    <td>ECO_HIGH</td>
+                    <td>QUICK</td>
+                    <td>4</td>
+                    <td>FSHORT:PMEDIUM</td>
+                    <td>0</td>
+                    <td class="combination-id">EURUSD:ECO_HIGH:QUICK:O4:FSHORT:PMEDIUM:G0</td>
+                    <td>2024-08-15 10:30:00</td>
+                    <td>2024-08-20 09:15:00</td>
+                </tr>
+                <tr>
+                    <td>EURUSD</td>
+                    <td>EQUITY_OPEN_USA</td>
+                    <td>MEDIUM</td>
+                    <td>1</td>
+                    <td>FLONG:PNONE</td>
+                    <td>1</td>
+                    <td class="combination-id">EURUSD:EQUITY_OPEN_USA:MEDIUM:O1:FLONG:PNONE:G1</td>
+                    <td>2024-08-15 10:30:00</td>
+                    <td>2024-08-18 14:22:00</td>
+                </tr>
+                <tr>
+                    <td>GBPUSD</td>
+                    <td>ANTICIPATION_4HR</td>
+                    <td>FLASH</td>
+                    <td>6</td>
+                    <td>FIMMEDIATE:PEXTENDED</td>
+                    <td>0</td>
+                    <td class="combination-id">GBPUSD:ANTICIPATION_4HR:FLASH:O6:FIMMEDIATE:PEXTENDED:G0</td>
+                    <td>2024-08-16 08:45:00</td>
+                    <td>2024-08-19 11:30:00</td>
+                </tr>
+                <tr>
+                    <td>USDJPY</td>
+                    <td>ALL_INDICATORS</td>
+                    <td>LONG</td>
+                    <td>2</td>
+                    <td>FMEDIUM:PSHORT</td>
+                    <td>2</td>
+                    <td class="combination-id">USDJPY:ALL_INDICATORS:LONG:O2:FMEDIUM:PSHORT:G2</td>
+                    <td>2024-08-17 16:20:00</td>
+                    <td>2024-08-20 07:45:00</td>
+                </tr>
+                <tr>
+                    <td>EURUSD</td>
+                    <td>ECO_MED</td>
+                    <td>EXTENDED</td>
+                    <td>5</td>
+                    <td>FNONE:PYESTERDAY</td>
+                    <td>1</td>
+                    <td class="combination-id">EURUSD:ECO_MED:EXTENDED:O5:FNONE:PYESTERDAY:G1</td>
+                    <td>2024-08-14 12:00:00</td>
+                    <td>2024-08-20 08:30:00</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- RESPONSES TABLE -->
+    <div class="table-container">
+        <h2>⚙️ responses - Decision Parameters</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>combination_id</th>
+                    <th>decision</th>
+                    <th>size_multiplier</th>
+                    <th>confidence_adjustment</th>
+                    <th>delay_minutes</th>
+                    <th>max_attempts</th>
+                    <th>enabled</th>
+                    <th>version_tag</th>
+                    <th>notes</th>
+                    <th>updated_at</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="combination-id">EURUSD:ECO_HIGH:QUICK:O4:FSHORT:PMEDIUM:G0</td>
+                    <td class="decision-reentry">REENTRY</td>
+                    <td>1.5</td>
+                    <td>1.2</td>
+                    <td>2</td>
+                    <td>1</td>
+                    <td>1</td>
+                    <td>v2.1</td>
+                    <td>Partial profit - increase size</td>
+                    <td>2024-08-20 09:15:00</td>
+                </tr>
+                <tr>
+                    <td class="combination-id">EURUSD:EQUITY_OPEN_USA:MEDIUM:O1:FLONG:PNONE:G1</td>
+                    <td class="decision-end">END_TRADING</td>
+                    <td>0.0</td>
+                    <td>0.0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>1</td>
+                    <td>v2.1</td>
+                    <td>Stop loss hit - end chain</td>
+                    <td>2024-08-18 14:22:00</td>
+                </tr>
+                <tr>
+                    <td class="combination-id">GBPUSD:ANTICIPATION_4HR:FLASH:O6:FIMMEDIATE:PEXTENDED:G0</td>
+                    <td class="decision-reentry">REENTRY</td>
+                    <td>2.0</td>
+                    <td>1.5</td>
+                    <td>1</td>
+                    <td>2</td>
+                    <td>1</td>
+                    <td>v2.0</td>
+                    <td>Exceeded TP - aggressive follow</td>
+                    <td>2024-08-19 11:30:00</td>
+                </tr>
+                <tr>
+                    <td class="combination-id">USDJPY:ALL_INDICATORS:LONG:O2:FMEDIUM:PSHORT:G2</td>
+                    <td class="decision-end">END_TRADING</td>
+                    <td>0.0</td>
+                    <td>0.0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>1</td>
+                    <td>v2.1</td>
+                    <td>Max generations reached</td>
+                    <td>2024-08-20 07:45:00</td>
+                </tr>
+                <tr>
+                    <td class="combination-id">EURUSD:ECO_MED:EXTENDED:O5:FNONE:PYESTERDAY:G1</td>
+                    <td class="decision-reentry">REENTRY</td>
+                    <td>1.0</td>
+                    <td>1.0</td>
+                    <td>5</td>
+                    <td>1</td>
+                    <td>0</td>
+                    <td>v2.1</td>
+                    <td>Disabled for testing</td>
+                    <td>2024-08-20 08:30:00</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- REENTRY CHAINS TABLE -->
+    <div class="table-container">
+        <h2>🔗 reentry_chains_EURUSD - Chain Tracking</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>chain_id</th>
+                    <th>original_trade_id</th>
+                    <th>chain_trades</th>
+                    <th>total_pnl</th>
+                    <th>chain_status</th>
+                    <th>started_at</th>
+                    <th>ended_at</th>
+                    <th>combination_history</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>CH_EUR_240820_001</td>
+                    <td>1547823</td>
+                    <td>3</td>
+                    <td class="performance-good">+127.50</td>
+                    <td class="status-ended">COMPLETED</td>
+                    <td>2024-08-20 08:30:15</td>
+                    <td>2024-08-20 11:45:30</td>
+                    <td>G0:O4→G1:O5→G2:O6</td>
+                </tr>
+                <tr>
+                    <td>CH_EUR_240820_002</td>
+                    <td>1547856</td>
+                    <td>2</td>
+                    <td class="performance-bad">-45.25</td>
+                    <td class="status-ended">STOPPED</td>
+                    <td>2024-08-20 10:15:42</td>
+                    <td>2024-08-20 10:47:18</td>
+                    <td>G0:O2→G1:O1</td>
+                </tr>
+                <tr>
+                    <td>CH_EUR_240820_003</td>
+                    <td>1547901</td>
+                    <td>1</td>
+                    <td>+0.00</td>
+                    <td class="status-active">ACTIVE</td>
+                    <td>2024-08-20 12:22:10</td>
+                    <td></td>
+                    <td>G0:O4</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- REENTRY EXECUTIONS TABLE -->
+    <div class="table-container">
+        <h2>📈 reentry_executions_EURUSD - Execution Audit</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>id</th>
+                    <th>ts</th>
+                    <th>action_no</th>
+                    <th>chain_id</th>
+                    <th>source_trade_id</th>
+                    <th>reentry_trade_id</th>
+                    <th>size_lots</th>
+                    <th>entry_price</th>
+                    <th>generation</th>
+                    <th>confidence</th>
+                    <th>status</th>
+                    <th>exec_ms</th>
+                    <th>error</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1001</td>
+                    <td>2024-08-20 08:31:25</td>
+                    <td>4</td>
+                    <td>CH_EUR_240820_001</td>
+                    <td>1547823</td>
+                    <td>1547824</td>
+                    <td>0.15</td>
+                    <td>1.1034</td>
+                    <td>1</td>
+                    <td>0.85</td>
+                    <td>SUCCESS</td>
+                    <td>245</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>1002</td>
+                    <td>2024-08-20 09:45:12</td>
+                    <td>5</td>
+                    <td>CH_EUR_240820_001</td>
+                    <td>1547824</td>
+                    <td>1547825</td>
+                    <td>0.15</td>
+                    <td>1.1048</td>
+                    <td>2</td>
+                    <td>0.92</td>
+                    <td>SUCCESS</td>
+                    <td>189</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>1003</td>
+                    <td>2024-08-20 10:16:35</td>
+                    <td>2</td>
+                    <td>CH_EUR_240820_002</td>
+                    <td>1547856</td>
+                    <td>1547857</td>
+                    <td>0.08</td>
+                    <td>1.1029</td>
+                    <td>1</td>
+                    <td>0.73</td>
+                    <td>SUCCESS</td>
+                    <td>312</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>1004</td>
+                    <td>2024-08-20 12:23:18</td>
+                    <td>4</td>
+                    <td>CH_EUR_240820_003</td>
+                    <td>1547901</td>
+                    <td></td>
+                    <td>0.15</td>
+                    <td>1.1052</td>
+                    <td>1</td>
+                    <td>0.88</td>
+                    <td>PENDING</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- PERFORMANCE TABLE -->
+    <div class="table-container">
+        <h2>📊 reentry_performance_EURUSD - Action KPIs</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>action_no</th>
+                    <th>execs</th>
+                    <th>wins</th>
+                    <th>total_pnl</th>
+                    <th>avg_pnl</th>
+                    <th>success_rate</th>
+                    <th>sharpe</th>
+                    <th>last_updated</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="performance-bad">
+                    <td>1</td>
+                    <td>45</td>
+                    <td>12</td>
+                    <td>-234.75</td>
+                    <td>-5.22</td>
+                    <td>0.27</td>
+                    <td>-0.34</td>
+                    <td>2024-08-20 12:00:00</td>
+                </tr>
+                <tr class="performance-bad">
+                    <td>2</td>
+                    <td>38</td>
+                    <td>19</td>
+                    <td>-67.50</td>
+                    <td>-1.78</td>
+                    <td>0.50</td>
+                    <td>-0.12</td>
+                    <td>2024-08-20 12:00:00</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>31</td>
+                    <td>18</td>
+                    <td>+23.25</td>
+                    <td>+0.75</td>
+                    <td>0.58</td>
+                    <td>0.08</td>
+                    <td>2024-08-20 12:00:00</td>
+                </tr>
+                <tr class="performance-good">
+                    <td>4</td>
+                    <td>42</td>
+                    <td>28</td>
+                    <td>+156.80</td>
+                    <td>+3.73</td>
+                    <td>0.67</td>
+                    <td>0.45</td>
+                    <td>2024-08-20 12:00:00</td>
+                </tr>
+                <tr class="performance-good">
+                    <td>5</td>
+                    <td>29</td>
+                    <td>21</td>
+                    <td>+198.45</td>
+                    <td>+6.84</td>
+                    <td>0.72</td>
+                    <td>0.58</td>
+                    <td>2024-08-20 12:00:00</td>
+                </tr>
+                <tr class="performance-good">
+                    <td>6</td>
+                    <td>18</td>
+                    <td>15</td>
+                    <td>+287.30</td>
+                    <td>+15.96</td>
+                    <td>0.83</td>
+                    <td>0.79</td>
+                    <td>2024-08-20 12:00:00</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="note">
+        <strong>Key Patterns:</strong>
+        <ul>
+            <li><strong>Combination IDs</strong> encode all matrix dimensions: Symbol, Signal, Duration, Outcome, Future/Past proximity, Generation</li>
+            <li><strong>Action Numbers</strong> map to outcomes: 1-2 (losses) typically END_TRADING, 4-6 (profits) often REENTRY with increasing aggression</li>
+            <li><strong>Performance Metrics</strong> show Actions 4-6 (partial to excess profits) have highest success rates</li>
+            <li><strong>Chain Tracking</strong> maintains audit trail from original trade through all reentries</li>
+        </ul>
+    </div>
+</body>
+</html>

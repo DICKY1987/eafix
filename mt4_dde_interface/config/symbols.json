@@ -1,0 +1,17 @@
+{
+    "forex_majors": [
+        {"symbol": "EURUSD", "description": "Euro vs US Dollar", "digits": 5},
+        {"symbol": "GBPUSD", "description": "British Pound vs US Dollar", "digits": 5},
+        {"symbol": "USDJPY", "description": "US Dollar vs Japanese Yen", "digits": 3},
+        {"symbol": "USDCHF", "description": "US Dollar vs Swiss Franc", "digits": 5},
+        {"symbol": "AUDUSD", "description": "Australian Dollar vs US Dollar", "digits": 5},
+        {"symbol": "USDCAD", "description": "US Dollar vs Canadian Dollar", "digits": 5},
+        {"symbol": "NZDUSD", "description": "New Zealand Dollar vs US Dollar", "digits": 5}
+    ],
+    "forex_minors": [
+        {"symbol": "EURJPY", "description": "Euro vs Japanese Yen", "digits": 3},
+        {"symbol": "GBPJPY", "description": "British Pound vs Japanese Yen", "digits": 3},
+        {"symbol": "EURGBP", "description": "Euro vs British Pound", "digits": 5},
+        {"symbol": "EURAUD", "description": "Euro vs Australian Dollar", "digits": 5}
+    ]
+}
