@@ -1,0 +1,572 @@
+# ===== Enterprise Atomic Process Definition Template =====
+schema_version: 2.0
+process:
+  id: PROC.EXAMPLE.TRADING_CALENDAR     # Stable, machine-friendly identifier
+  name: "Economic Calendar Ingestion & Normalization"
+  version: "1.0.0"
+  description: >
+    Complete end-to-end economic calendar data pipeline including ingestion,
+    validation, normalization, filtering, and distribution to trading systems.
+    Implements enterprise-grade error handling, observability, and compliance.
+  domain: "trading/data-ops"
+  owner: "ROLE.DATA_OPS_LEAD"
+  stakeholders:
+    - "ROLE.QUANT_LEAD"
+    - "ROLE.DEVOPS_LEAD"
+    - "ROLE.COMPLIANCE_OFFICER"
+  tags: [calendar, ingestion, normalization, trading, data-pipeline]
+  created_by: "system.architect"
+  created_at: "2025-08-22T00:00:00Z"
+  compliance_frameworks: ["SOX", "GDPR", "PCI-DSS"]
+
+# ---- Canonical Registries (Single Source of Truth) ----
+roles:
+  - id: ROLE.DATA_OPS_LEAD
+    name: "Data Operations Lead"
+    description: "Responsible for data pipeline operations and quality"
+    permissions: ["data.read", "data.write", "pipeline.manage"]
+    contact_info:
+      email: "data-ops@company.com"
+      escalation: "manager@company.com"
+  
+  - id: ROLE.QUANT_LEAD
+    name: "Quantitative Analysis Lead"
+    description: "Defines data requirements and validation rules"
+    permissions: ["data.read", "rules.define"]
+  
+  - id: ROLE.DEVOPS_LEAD
+    name: "DevOps Lead"
+    description: "Infrastructure and deployment management"
+    permissions: ["infra.manage", "deploy.execute"]
+
+systems:
+  - id: SYS.PYTHON_INGESTOR
+    name: "Python Data Ingestion Service"
+    description: "Primary data processing pipeline"
+    type: "microservice"
+    endpoints:
+      health: "http://localhost:8080/health"
+      metrics: "http://localhost:8080/metrics"
+    dependencies: ["SYS.OBJECT_STORAGE", "SYS.MESSAGE_QUEUE"]
+  
+  - id: SYS.OBJECT_STORAGE
+    name: "S3-Compatible Object Storage"
+    description: "Persistent data storage system"
+    type: "storage"
+    
+  - id: SYS.MT4_EA
+    name: "MetaTrader 4 Expert Advisor"
+    description: "Trading execution system"
+    type: "trading_platform"
+
+  - id: SYS.MONITORING
+    name: "Observability Platform"
+    description: "Metrics, logs, and alerting system"
+    type: "observability"
+
+artifacts:
+  - id: ART.RAW_CALENDAR
+    name: "Raw Economic Calendar Data"
+    description: "Unprocessed calendar data from external sources"
+    format: csv
+    schema:
+      fields: [timestamp, timezone, country, currency, event, impact, actual, forecast, previous]
+      required: [timestamp, country, event, impact]
+    location_pattern: "/data/inbound/calendar/calendar_*.csv"
+    retention_policy: "30 days"
+  
+  - id: ART.NORMALIZED_CALENDAR
+    name: "Normalized Calendar Data"
+    description: "Processed and validated calendar data"
+    format: csv
+    schema:
+      fields: [event_id, dt_utc, currency, event, impact, category, flags]
+      required: [event_id, dt_utc, currency, event, impact]
+    location_pattern: "/data/processed/calendar/normalized_*.csv"
+    retention_policy: "1 year"
+  
+  - id: ART.EA_CALENDAR
+    name: "EA-Ready Calendar Export"
+    description: "Calendar data formatted for MT4 EA consumption"
+    format: csv
+    schema:
+      fields: [datetime, currency, event, impact, importance]
+      constraints: ["datetime in UTC", "impact in {MEDIUM,HIGH}"]
+    location_pattern: "/data/export/ea_calendar.csv"
+    retention_policy: "90 days"
+
+data_models:
+  - id: DM.CALENDAR_EVENT
+    description: "Standard calendar event structure"
+    required_fields: [event_id, datetime_utc, currency, event_name, impact_level]
+    optional_fields: [actual_value, forecast_value, previous_value, category, flags]
+    constraints:
+      - "impact_level in {LOW, MEDIUM, HIGH}"
+      - "datetime_utc is ISO8601 with Z suffix"
+      - "currency matches ISO 4217"
+      - "event_id is SHA-256 hash of core fields"
+    examples:
+      - event_id: "a1b2c3d4e5f6..."
+        datetime_utc: "2025-08-22T14:30:00Z"
+        currency: "USD"
+        event_name: "Non-Farm Payrolls"
+        impact_level: "HIGH"
+
+enums:
+  ImpactLevel: [LOW, MEDIUM, HIGH]
+  ProcessingStatus: [PENDING, PROCESSING, COMPLETED, FAILED, QUARANTINED]
+  ErrorSeverity: [INFO, WARNING, ERROR, CRITICAL]
+  ValidationResult: [PASS, FAIL, SKIP]
+
+# ---- Global Process Validations ----
+validations:
+  - id: VAL.ONLY_MEDIUM_HIGH_EXPORT
+    description: "Only MEDIUM and HIGH impact events in final export"
+    rule: "ART.EA_CALENDAR.impact in {MEDIUM, HIGH}"
+    severity: error
+    scope: "global"
+  
+  - id: VAL.UTC_TIMESTAMPS
+    description: "All timestamps must be in UTC"
+    rule: "all datetime fields end with 'Z'"
+    severity: error
+    scope: "global"
+
+# ---- Named Flows (Execution Paths) ----
+flows:
+  happy_path: 
+    - "1.001"  # Detect new file
+    - "1.002"  # Validate format
+    - "1.003"  # Normalize data
+    - "1.004"  # Filter by impact
+    - "1.005"  # Export for EA
+  
+  validation_failure:
+    - "1.001"  # Detect new file
+    - "1.002"  # Validate format (fails)
+    - "9.100"  # Quarantine file
+    - "9.200"  # Send alert
+  
+  recovery_retry:
+    - "9.100"  # Quarantine step
+    - "9.300"  # Wait backoff period
+    - "1.001"  # Retry from beginning
+
+# ---- Atomic Steps ----
+steps:
+  - id: "1.001"
+    name: "Detect New Calendar File"
+    intent: "Trigger pipeline when new raw calendar data becomes available"
+    description: "Monitor inbound directory for new economic calendar files and validate basic file properties"
+    owner: ROLE.DATA_OPS_LEAD
+    system: SYS.PYTHON_INGESTOR
+    
+    # Trigger definition
+    trigger:
+      type: file_watch
+      config:
+        path: "/data/inbound/calendar/"
+        pattern: "calendar_*.csv"
+        min_size_bytes: 1024
+        max_age_hours: 24
+    
+    # Pre-conditions
+    preconditions:
+      - "Inbound directory exists and is readable"
+      - "Sufficient disk space available (>100MB)"
+      - "Python ingestion service is healthy"
+    
+    # Actions performed
+    actions:
+      - "Scan inbound directory for files matching pattern"
+      - "Check file metadata (size, age, permissions)"
+      - "Compute SHA-256 hash of file contents"
+      - "Compare hash against previously processed files"
+      - "Log file detection event with metadata"
+    
+    # Post-conditions
+    postconditions:
+      - "File is staged for processing"
+      - "File hash is recorded in processing log"
+      - "Detection event is logged for audit"
+    
+    # Input/Output specifications
+    inputs:
+      - artifact: ART.RAW_CALENDAR
+        location: "/data/inbound/calendar/"
+        required: true
+        validation: "file_size > 1KB and file_age < 24h"
+    
+    outputs:
+      - artifact: ART.RAW_CALENDAR
+        location: "/data/staging/calendar/"
+        required: true
+        transformation: "copy with hash verification"
+    
+    # Validations
+    validations:
+      - id: VAL.FILE_NOT_DUPLICATE
+        description: "File has not been processed before"
+        rule: "computed_hash not in processed_hashes"
+        severity: error
+        remediation: "Skip file and log duplicate detection"
+      
+      - id: VAL.FILE_FORMAT_BASIC
+        description: "File appears to be valid CSV"
+        rule: "file has .csv extension and contains comma separators"
+        severity: warning
+    
+    # Performance requirements
+    sla_ms: 5000  # Must complete within 5 seconds
+    timeout_ms: 30000  # Timeout after 30 seconds
+    
+    # Success/Error handling
+    on_success:
+      next: "1.002"
+    
+    on_error:
+      policy: retry
+      retries: 3
+      backoff_strategy: "exponential:30s..300s"
+      timeout_ms: 30000
+      escalation_role: ROLE.DATA_OPS_LEAD
+      recovery_step: "9.100"
+      cleanup_actions:
+        - "Move file to quarantine directory"
+        - "Log error details for investigation"
+    
+    # Observability
+    metrics:
+      - name: "calendar_file_detect_latency_ms"
+        type: timer
+        description: "Time to detect and stage new file"
+        threshold_warning: 3000
+        threshold_critical: 10000
+      
+      - name: "calendar_files_detected_total"
+        type: counter
+        description: "Total files detected"
+        labels: ["source", "file_type"]
+    
+    audit:
+      events: ["file.detected", "file.staged", "file.duplicate_skipped"]
+      required_fields: ["file_path", "file_hash", "file_size", "detection_timestamp"]
+      retention_days: 365  # Extended retention for compliance
+    
+    trace:
+      spec_refs: ["SPEC.CALENDAR.INGEST.001"]
+      test_refs: ["TEST.CALENDAR.DETECT.001", "TEST.CALENDAR.DETECT.002"]
+      change_history:
+        - version: "1.0"
+          date: "2025-08-22"
+          author: "system.architect"
+          changes: ["Initial implementation"]
+
+  - id: "1.002"
+    name: "Validate File Format & Schema"
+    intent: "Ensure raw calendar data meets expected format and quality standards"
+    description: "Perform comprehensive validation of CSV structure, data types, and business rules"
+    owner: ROLE.QUANT_LEAD
+    system: SYS.PYTHON_INGESTOR
+    
+    preconditions:
+      - "File is staged and hash verified"
+      - "Validation rules are loaded and current"
+    
+    actions:
+      - "Parse CSV and validate header structure"
+      - "Check data types for each column"
+      - "Validate timestamp formats and timezone information"
+      - "Check for required fields and data completeness"
+      - "Apply business validation rules"
+      - "Generate validation report with statistics"
+    
+    postconditions:
+      - "File validation status is determined"
+      - "Validation report is generated"
+      - "Invalid records are flagged"
+    
+    inputs:
+      - artifact: ART.RAW_CALENDAR
+        location: "/data/staging/calendar/"
+        required: true
+    
+    validations:
+      - id: VAL.CSV_STRUCTURE
+        description: "CSV has expected columns and structure"
+        rule: "headers match expected schema"
+        severity: error
+      
+      - id: VAL.TIMESTAMP_FORMAT
+        description: "Timestamps are in expected format"
+        rule: "all timestamp fields parse successfully"
+        severity: error
+      
+      - id: VAL.REQUIRED_FIELDS
+        description: "All required fields have values"
+        rule: "no null values in required columns"
+        severity: error
+      
+      - id: VAL.DATA_QUALITY
+        description: "Data quality meets minimum standards"
+        rule: "valid_record_percentage >= 95%"
+        severity: warning
+    
+    sla_ms: 10000  # 10 seconds for validation
+    
+    on_success:
+      next: "1.003"
+    
+    on_error:
+      policy: halt  # Don't retry validation failures
+      recovery_step: "9.100"
+      cleanup_actions:
+        - "Generate detailed validation error report"
+        - "Quarantine file with reason code"
+    
+    metrics:
+      - name: "calendar_validation_duration_ms"
+        type: timer
+        description: "Time spent validating file"
+      
+      - name: "calendar_validation_error_rate"
+        type: gauge
+        description: "Percentage of validation errors"
+        threshold_warning: 0.05
+        threshold_critical: 0.10
+    
+    audit:
+      events: ["validation.started", "validation.completed", "validation.failed"]
+      required_fields: ["file_path", "validation_result", "error_count", "record_count"]
+
+  - id: "1.003"
+    name: "Normalize & Transform Data"
+    intent: "Convert raw calendar data to canonical format with UTC timestamps"
+    description: "Standardize data format, convert timezones, and enrich with derived fields"
+    owner: ROLE.QUANT_LEAD
+    system: SYS.PYTHON_INGESTOR
+    
+    preconditions:
+      - "File validation passed"
+      - "Timezone mapping data is available"
+    
+    actions:
+      - "Parse source timestamps with timezone information"
+      - "Convert all timestamps to UTC (Z suffix)"
+      - "Normalize impact levels to standard enum values"
+      - "Generate stable event_id using hash of key fields"
+      - "Add derived fields (category, flags, etc.)"
+      - "Sort records chronologically"
+    
+    postconditions:
+      - "All timestamps are in UTC format"
+      - "Event IDs are unique and stable"
+      - "Data follows canonical schema"
+    
+    inputs:
+      - artifact: ART.RAW_CALENDAR
+        location: "/data/staging/calendar/"
+        required: true
+    
+    outputs:
+      - artifact: ART.NORMALIZED_CALENDAR
+        location: "/data/processed/calendar/"
+        required: true
+        transformation: "normalization with UTC conversion"
+    
+    validations:
+      - id: VAL.UTC_CONVERSION
+        description: "All datetime fields are in UTC"
+        rule: "all datetime values end with 'Z'"
+        severity: error
+      
+      - id: VAL.EVENT_ID_UNIQUE
+        description: "Event IDs are unique within dataset"
+        rule: "event_id field has no duplicates"
+        severity: error
+      
+      - id: VAL.CANONICAL_SCHEMA
+        description: "Output matches canonical schema"
+        rule: "output schema matches DM.CALENDAR_EVENT"
+        severity: error
+    
+    sla_ms: 30000  # 30 seconds for normalization
+    
+    on_success:
+      next: "1.004"
+    
+    metrics:
+      - name: "calendar_normalization_duration_ms"
+        type: timer
+      
+      - name: "calendar_records_processed_total"
+        type: counter
+        labels: ["source_country", "impact_level"]
+
+  - id: "1.004"
+    name: "Filter High-Impact Events"
+    intent: "Retain only MEDIUM and HIGH impact events for trading system"
+    description: "Filter calendar data to include only events relevant to trading operations"
+    owner: ROLE.QUANT_LEAD
+    system: SYS.PYTHON_INGESTOR
+    
+    actions:
+      - "Filter records where impact_level in {MEDIUM, HIGH}"
+      - "Add anticipation events (T-60m, T-15m markers)"
+      - "Apply geographical filters if configured"
+      - "Generate processing statistics"
+    
+    inputs:
+      - artifact: ART.NORMALIZED_CALENDAR
+        location: "/data/processed/calendar/"
+        required: true
+    
+    outputs:
+      - artifact: ART.NORMALIZED_CALENDAR
+        location: "/data/filtered/calendar/"
+        required: true
+        transformation: "impact filtering and anticipation event generation"
+    
+    validations:
+      - id: VAL.IMPACT_FILTER
+        description: "Only MEDIUM/HIGH impact events remain"
+        rule: "all records have impact_level in {MEDIUM, HIGH}"
+        severity: error
+    
+    sla_ms: 5000
+    
+    on_success:
+      next: "1.005"
+
+  - id: "1.005"
+    name: "Export for Trading System"
+    intent: "Generate final calendar file optimized for MT4 EA consumption"
+    description: "Create trading system compatible export with required schema and format"
+    owner: ROLE.DEVOPS_LEAD
+    system: SYS.PYTHON_INGESTOR
+    
+    actions:
+      - "Convert to EA-required schema format"
+      - "Sort chronologically by datetime"
+      - "Write to designated export location"
+      - "Verify file integrity and permissions"
+      - "Update processing status and metrics"
+    
+    inputs:
+      - artifact: ART.NORMALIZED_CALENDAR
+        location: "/data/filtered/calendar/"
+        required: true
+    
+    outputs:
+      - artifact: ART.EA_CALENDAR
+        location: "/data/export/ea_calendar.csv"
+        required: true
+        transformation: "EA schema conversion"
+    
+    validations:
+      - id: VAL.EA_SCHEMA
+        description: "Output matches EA expected schema"
+        rule: "schema matches ART.EA_CALENDAR definition"
+        severity: error
+      
+      - id: VAL.NON_EMPTY_EXPORT
+        description: "Export contains data"
+        rule: "output file has > 0 records"
+        severity: error
+    
+    postconditions:
+      - "EA calendar file is available for consumption"
+      - "File permissions allow EA read access"
+      - "Process completion is recorded"
+    
+    sla_ms: 10000
+    
+    on_success:
+      next: null  # Process complete
+    
+    metrics:
+      - name: "calendar_export_size_bytes"
+        type: gauge
+        description: "Size of exported calendar file"
+      
+      - name: "calendar_export_record_count"
+        type: gauge
+        description: "Number of records in export"
+    
+    audit:
+      events: ["export.started", "export.completed"]
+      required_fields: ["export_path", "record_count", "file_size"]
+
+  # ---- Error Handling and Recovery Steps ----
+  
+  - id: "9.100"
+    name: "Quarantine Failed File"
+    intent: "Safely isolate problematic files for investigation"
+    description: "Move failed files to quarantine with metadata for troubleshooting"
+    owner: ROLE.DATA_OPS_LEAD
+    system: SYS.PYTHON_INGESTOR
+    
+    actions:
+      - "Move source file to quarantine directory"
+      - "Generate failure report with error details"
+      - "Record quarantine event in audit log"
+      - "Update processing metrics"
+    
+    outputs:
+      - artifact: ART.RAW_CALENDAR
+        location: "/data/quarantine/"
+        required: true
+        transformation: "move with metadata"
+    
+    sla_ms: 5000
+    
+    on_success:
+      next: "9.200"
+  
+  - id: "9.200"
+    name: "Send Failure Alert"
+    intent: "Notify operations team of processing failure"
+    description: "Send structured alert with failure details and recommended actions"
+    owner: ROLE.DATA_OPS_LEAD
+    system: SYS.MONITORING
+    
+    actions:
+      - "Format alert message with error context"
+      - "Send to configured notification channels"
+      - "Update incident tracking system"
+      - "Schedule follow-up if no acknowledgment"
+    
+    sla_ms: 30000
+    
+    on_success:
+      next: null  # Alert sent, manual intervention required
+
+# ---- Quality Gates ----
+exit_checks:
+  - id: EXIT.SUCCESSFUL_EXPORT
+    description: "Process produced valid export file"
+    rule: "exists(/data/export/ea_calendar.csv) and file_size > 0"
+    severity: error
+    required_artifacts: ["ART.EA_CALENDAR"]
+  
+  - id: EXIT.PROCESSING_LOGGED
+    description: "All processing steps logged for audit"
+    rule: "audit_events_count >= expected_events_count"
+    severity: warning
+
+# ---- Global Process Metadata ----
+sla_targets:
+  total_processing_time_ms: 60000  # 1 minute end-to-end
+  availability_percentage: 99.9
+  error_rate_percentage: 0.1
+
+compliance:
+  data_classification: "internal"
+  retention_requirements:
+    processed_data: "1 year"
+    audit_logs: "7 years"
+    error_logs: "2 years"
+  access_controls:
+    read: ["ROLE.DATA_OPS_LEAD", "ROLE.QUANT_LEAD"]
+    write: ["ROLE.DATA_OPS_LEAD"]
+    admin: ["ROLE.DEVOPS_LEAD"]

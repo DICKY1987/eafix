@@ -1,0 +1,189 @@
+title: "Atomic Process Flow — Reentry Trading System"
+version: "v3.0"
+date: "2025-08-21"
+id_conventions: "See Matrix Grammar in Canonical Spec (Canvas)"
+legend: "Each step is atomic (one action). Conditional flow uses IF/ELSE with explicit GOTO targets."
+
+sections:
+  - section_id: "0.000"
+    title: "System Bootstrap (One-Time on Service Start)"
+    description: "Initialize system components and validate configuration"
+    actors: ["PY"]
+    transport: "Filesystem"
+    steps:
+      - step_id: "0.001"
+        actor: "PY"
+        description: "Load Common\\Files\\reentry\\config\\parameters.schema.json into memory."
+        dependencies: []
+        goto_targets: []
+        conditions: []
+        sla_ms: 500
+        file_operations: ["READ: parameters.schema.json"]
+        validation_rules: []
+        error_codes: []
+        notes: ""
+      
+      - step_id: "0.002"
+        actor: "PY"
+        description: "Validate schema self-integrity ($id, $schema fields present)."
+        dependencies: ["0.001"]
+        goto_targets: ["11.010"]
+        conditions: ["If fail"]
+        sla_ms: 200
+        file_operations: []
+        validation_rules: ["$id field present", "$schema field present"]
+        error_codes: []
+        notes: "Critical validation - system cannot proceed without valid schema"
+      
+      - step_id: "0.003"
+        actor: "PY"
+        description: "Ensure directories exist: Common\\Files\\reentry\\bridge, ...\\logs, ...\\config, ...\\data. Create if missing."
+        dependencies: ["0.002"]
+        goto_targets: []
+        conditions: []
+        sla_ms: 1000
+        file_operations: 
+          - "CREATE_DIR: bridge/"
+          - "CREATE_DIR: logs/"
+          - "CREATE_DIR: config/"
+          - "CREATE_DIR: data/"
+        validation_rules: []
+        error_codes: []
+        notes: ""
+      
+      - step_id: "0.004"
+        actor: "PY"
+        description: "Open append handles (with retry) for: bridge\\trading_signals.csv, bridge\\trade_responses.csv (read tail), logs\\parameter_log.csv."
+        dependencies: ["0.003"]
+        goto_targets: []
+        conditions: []
+        sla_ms: 1000
+        file_operations:
+          - "OPEN_APPEND: bridge/trading_signals.csv"
+          - "OPEN_READ_TAIL: bridge/trade_responses.csv"
+          - "OPEN_APPEND: logs/parameter_log.csv"
+        validation_rules: []
+        error_codes: []
+        notes: "Retry logic should handle temporary file locks"
+
+  - section_id: "1.000"
+    title: "Economic Calendar Ingestion (Hourly From Sunday 12:00 Local)"
+    description: "Ingest and process economic calendar data"
+    actors: ["PY", "FS"]
+    transport: "CSV-only"
+    steps:
+      - step_id: "1.001"
+        actor: "PY"
+        description: "At scheduler tick, scan %USERPROFILE%\\Downloads for newest economic_calendar*.csv/.xlsx."
+        dependencies: []
+        goto_targets: []
+        conditions: []
+        sla_ms: 1000
+        file_operations: ["SCAN: %USERPROFILE%\\Downloads"]
+        validation_rules: []
+        error_codes: []
+        notes: "File pattern: economic_calendar*.{csv,xlsx}"
+      
+      - step_id: "1.002"
+        actor: "PY"
+        description: "If none found GOTO 1.010. Else copy-as-new to data\\economic_calendar_raw_YYYYMMDD_HHMMSS.ext (write→fsync→rename atomic)."
+        dependencies: ["1.001"]
+        goto_targets: ["1.010"]
+        conditions: ["If none found"]
+        sla_ms: 500
+        file_operations: ["WRITE_ATOMIC: data/economic_calendar_raw_*.ext"]
+        validation_rules: []
+        error_codes: []
+        notes: "Atomic operation ensures data integrity"
+      
+      - step_id: "1.003"
+        actor: "PY"
+        description: "Compute SHA-256 of raw file; compare with data\\economic_calendar_raw.latest.sha256."
+        dependencies: ["1.002"]
+        goto_targets: ["1.010"]
+        conditions: ["If identical"]
+        sla_ms: 300
+        file_operations: 
+          - "READ: data/economic_calendar_raw.latest.sha256"
+          - "COMPUTE_HASH: SHA-256"
+        validation_rules: ["File hash comparison"]
+        error_codes: []
+        notes: "Skip processing if file unchanged"
+
+  - section_id: "6.000"
+    title: "EA Side: Validation & Acknowledgement (On Every UPDATE_PARAMS)"
+    description: "MT4 Expert Advisor validates parameters and acknowledges"
+    actors: ["EA"]
+    transport: "CSV Bridge"
+    steps:
+      - step_id: "6.001"
+        actor: "EA"
+        description: "Detect new line in trading_signals.csv (poll every 2–5s)."
+        dependencies: []
+        goto_targets: []
+        conditions: []
+        sla_ms: 5000
+        file_operations: ["POLL: trading_signals.csv"]
+        validation_rules: []
+        error_codes: []
+        notes: "Detection SLA is ≤5s, not immediate"
+      
+      - step_id: "6.002"
+        actor: "EA"
+        description: "Parse row; verify version==3.0."
+        dependencies: ["6.001"]
+        goto_targets: ["REJECT_SET"]
+        conditions: ["If mismatch"]
+        sla_ms: 5
+        file_operations: []
+        validation_rules: ["version field == '3.0'"]
+        error_codes: ["E0000"]
+        notes: "Version mismatch is fatal error"
+      
+      - step_id: "6.004"
+        actor: "EA"
+        description: "Compute effective_risk from inputs; ensure ≤ 3.50."
+        dependencies: ["6.003"]
+        goto_targets: ["REJECT_SET"]
+        conditions: ["If violated"]
+        sla_ms: 5
+        file_operations: []
+        validation_rules: ["effective_risk <= 3.50"]
+        error_codes: ["E1001"]
+        notes: "Hard risk limit enforced by EA"
+
+file_paths:
+  trading_signals: "bridge\\trading_signals.csv"
+  trade_responses: "bridge\\trade_responses.csv"
+  parameter_log: "logs\\parameter_log.csv"
+  economic_calendar: "data\\economic_calendar.csv"
+  matrix_map: "config\\matrix_map.csv"
+  parameters_schema: "config\\parameters.schema.json"
+
+metadata:
+  csv_headers:
+    trading_signals: "version,timestamp_utc,symbol,combination_id,action,parameter_set_id,json_payload_sha256,json_payload"
+    trade_responses: "version,timestamp_utc,symbol,combination_id,action,status,ea_code,detail_json"
+    parameter_log: "version,timestamp_utc,symbol,parameter_set_id,effective_risk,sl,sl_units,tp,tp_units,entry_order_type,trail_method,breakeven,notes"
+  
+  error_codes:
+    E0000: "Version mismatch"
+    E1001: "Risk limit exceeded"
+    E1012: "Take profit must be greater than stop loss for FIXED method"
+    E1020: "ATR validation failed"
+    E1030: "Maximum generation limit exceeded (R3 blocked)"
+    E1040: "News cutoff time violation"
+    E1050: "Order placement failed after retries"
+  
+  actors:
+    PY: "Python Service"
+    EA: "MT4 Expert Advisor"
+    FS: "Filesystem"
+    BR: "CSV Bridge"
+    TEST: "QA Testing"
+  
+  sla_targets:
+    fast_operations: 50    # milliseconds
+    file_operations: 500   # milliseconds
+    validation: 200        # milliseconds
+    broker_operations: 800 # milliseconds (network dependent)

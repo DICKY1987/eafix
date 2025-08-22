@@ -1,0 +1,72 @@
+
+flowchart TD
+  %% === Authoring & Source ===
+  subgraph A[Authoring & Source of Truth]
+    SPEC[Master Technical Specification (.md)]
+  end
+
+  %% === Monitoring & Ingestion ===
+  subgraph B[Monitoring & Ingestion]
+    WATCH1[AutomationChangeHandler\n(PY_Document_Automation_System)]
+    WATCH2[DocumentChangeHandler\n(ORCH_Ecosystem)]
+    STREAM[HUEY_P_PROCESS_StreamingDocument\n(Streaming Reader)]
+  end
+
+  %% === Parsing & Section Tracking ===
+  subgraph C[Parsing & Section Tracking]
+    PARSER1[HUEY_P_PARSER_StructuredDocument\n(Structured Parser)]
+    PARSER2[DocumentParser\n(PY_Document_Automation_System)]
+    SECTRACK[SectionTracker\n(ORCH_Ecosystem)]
+  end
+
+  %% === Orchestration & Runtime ===
+  subgraph D[Orchestration & Runtime]
+    INTEGRATED[HUEY_P_ARCH_Integrated\n(System Orchestrator)]
+    ORCH[HUEY_P_ORCH_Ecosystem\n(Documentation Ecosystem)]
+    COORD[HUEY_P_COORD_ConcurrentProcessing\n(Concurrent Task Coordinator)]
+  end
+
+  %% === Plugins & Artifact Generation ===
+  subgraph E[Plugins & Artifact Generation]
+    PLUGINFW[HUEY_P_FRAMEWORK_PluginArchitecture\n(Plugin Framework)]
+    PLUGINS[HUEY_P_EXAMPLE_Plugins\n(Document/Diagram Plugins)]
+    ARTGEN[ArtifactGenerator\n(ORCH_Ecosystem)]
+    TABLES[TableGenerator\n(PY_Document_Automation_System)]
+    UPDATER[DocumentUpdater\n(PY_Document_Automation_System)]
+  end
+
+  %% === Governance & Cross-Cutting ===
+  subgraph F[Governance & Cross-Cutting]
+    STATE[HUEY_P_STATE_Documentation\n(State & Job Tracking)]
+    RECOV[HUEY_P_SYS_RecoveryRollback\n+ HUEY_P_SYS_ErrorRecovery\n(Backups, Circuit Breakers)]
+    SEC[HUEY_P_ARCH_Security\n(Security Manager)]
+    MDM[HUEY_P_MGMT_MasterData\n(Master Data Registry + DQ)]
+    TOOLING[HUEY_P_TOOL_PluginDevelopment\n(Plugin Dev Server + Scaffolds)]
+  end
+
+  %% === Flows ===
+  SPEC --> WATCH1
+  SPEC --> WATCH2
+  WATCH1 -->|change detected| PARSER2
+  WATCH2 -->|change detected| SECTRACK
+  SPEC --> STREAM --> PARSER1
+  PARSER1 --> PLUGINFW
+  PARSER2 --> TABLES
+  SECTRACK -->|changes| ARTGEN
+  PLUGINFW <---> PLUGINS
+  PLUGINFW --> COORD
+  ARTGEN --> COORD
+  COORD --> INTEGRATED
+  TABLES --> UPDATER --> SPEC
+
+  %% Governance edges
+  INTEGRATED -. uses .-> STATE
+  COORD -. enforces .-> STATE
+  INTEGRATED -. wraps ops .-> RECOV
+  COORD -. wraps ops .-> RECOV
+  INTEGRATED -. secure ops .-> SEC
+  COORD -. secure ops .-> SEC
+  PARSER1 -. validates .-> MDM
+  PARSER2 -. validates .-> MDM
+  PLUGINS -. reference .-> MDM
+  TOOLING -. develops .-> PLUGINS

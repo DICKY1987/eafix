@@ -1,0 +1,1528 @@
+modules:
+  -
+    module: HUEY_P_PY_Document_Automation_System.py
+    doc: HUEY_P_PY_Document_Automation_System.py  Automated system for maintaining synchronization between the Master Technical Specification (source of truth), derived component tables, and visual diagrams.  
+    imports:
+      - hashlib
+      - logging
+      - re
+      - dataclasses::dataclass,field
+      - datetime::datetime
+      - pathlib::Path
+      - typing::Dict,List,Optional
+      - watchdog.events::FileSystemEventHandler
+      - watchdog.observers::Observer
+    classes:
+      -
+        name: ComponentDefinition
+        bases:
+
+        methods:
+
+      -
+        name: DocumentParser
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - spec_file_path
+          -
+            name: extract_components
+            args:
+              - self
+          -
+            name: _parse_component_text
+            args:
+              - self
+              - name
+              - text
+      -
+        name: TableGenerator
+        bases:
+
+        methods:
+          -
+            name: generate_component_matrix
+            args:
+              - self
+              - components
+      -
+        name: DocumentUpdater
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - spec_file_path
+          -
+            name: update_tables
+            args:
+              - self
+              - tables
+      -
+        name: AutomationChangeHandler
+        bases:
+          - FileSystemEventHandler
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - system
+          -
+            name: on_modified
+            args:
+              - self
+              - event
+          -
+            name: _calculate_file_hash
+            args:
+              - self
+              - file_path
+      -
+        name: DocumentAutomationSystem
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - spec_file_path
+          -
+            name: start_monitoring
+            args:
+              - self
+          -
+            name: stop_monitoring
+            args:
+              - self
+          -
+            name: process_document_change
+            args:
+              - self
+  -
+    module: HUEY_P_SYS_RecoveryRollback.py
+    doc: Documentation Recovery & Rollback System  Provides comprehensive recovery and rollback capabilities for the documentation processing system. Ensures the system can return to a known-good, consistent s
+    imports:
+      - contextlib
+      - gzip
+      - hashlib
+      - json
+      - logging
+      - shutil
+      - sqlite3
+      - tarfile
+      - tempfile
+      - threading
+      - dataclasses::asdict,dataclass
+      - datetime::datetime,timedelta
+      - enum::Enum
+      - pathlib::Path
+      - typing::Any,Dict,List,Optional
+    classes:
+      -
+        name: RecoveryPointType
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: RecoveryStatus
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: RecoveryPoint
+        bases:
+
+        methods:
+
+      -
+        name: DocumentationBackupManager
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - backup_directory
+              - retention_days
+          -
+            name: _initialize_database
+            args:
+              - self
+          -
+            name: create_recovery_point
+            args:
+              - self
+              - name
+              - description
+              - source_paths
+              - recovery_type
+          -
+            name: _create_backup_archive
+            args:
+              - self
+              - source_paths
+              - backup_path
+          -
+            name: _calculate_file_checksum
+            args:
+              - self
+              - file_path
+          -
+            name: restore_from_recovery_point
+            args:
+              - self
+              - recovery_id
+              - target_directory
+          -
+            name: _verify_restored_files
+            args:
+              - self
+              - target_path
+              - checksums
+          -
+            name: _get_recovery_point
+            args:
+              - self
+              - recovery_id
+      -
+        name: DocumentationTransactionManager
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - backup_manager
+          -
+            name: transaction
+            args:
+              - self
+              - operation_name
+              - watch_paths
+  -
+    module: HUEY_P_ORCH_Ecosystem.py
+    doc: HUEY_P_PY_Documentation_Ecosystem_Orchestrator.py  Complete orchestration system for the living documentation ecosystem. Manages bidirectional synchronization between the Master Technical Specificatio
+    imports:
+      - hashlib
+      - json
+      - logging
+      - re
+      - concurrent.futures::ThreadPoolExecutor
+      - dataclasses::asdict,dataclass
+      - datetime::datetime
+      - enum::Enum
+      - pathlib::Path
+      - typing::Any,Dict,List,Optional
+      - yaml
+      - watchdog.events::FileSystemEventHandler
+      - watchdog.observers::Observer
+      - roadmap_automation::RoadmapGenerator,TimelineGenerator
+    classes:
+      -
+        name: ChangeType
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: ArtifactType
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: SectionMetadata
+        bases:
+
+        methods:
+
+      -
+        name: ChangeEvent
+        bases:
+
+        methods:
+
+      -
+        name: SectionTracker
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - spec_file_path
+          -
+            name: extract_section_metadata
+            args:
+              - self
+          -
+            name: _parse_section_metadata
+            args:
+              - self
+              - section_id
+              - title
+              - content
+          -
+            name: _determine_generated_artifacts
+            args:
+              - self
+              - section_id
+          -
+            name: _build_dependency_graph
+            args:
+              - self
+          -
+            name: detect_changes
+            args:
+              - self
+              - previous_metadata
+      -
+        name: ArtifactGenerator
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - output_dir
+          -
+            name: generate_artifacts
+            args:
+              - self
+              - change_events
+              - section_metadata
+          -
+            name: _generate_single_artifact
+            args:
+              - self
+              - artifact_type
+              - metadata
+          -
+            name: _generate_roadmap
+            args:
+              - self
+      -
+        name: DocumentationEcosystem
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - spec_file_path
+              - output_dir
+          -
+            name: initialize
+            args:
+              - self
+          -
+            name: start_monitoring
+            args:
+              - self
+          -
+            name: stop_monitoring
+            args:
+              - self
+          -
+            name: process_file_change
+            args:
+              - self
+          -
+            name: process_changes
+            args:
+              - self
+              - changes
+      -
+        name: DocumentChangeHandler
+        bases:
+          - FileSystemEventHandler
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - ecosystem
+          -
+            name: on_modified
+            args:
+              - self
+              - event
+  -
+    module: HUEY_P_TOOL_PluginDevelopment.py
+    doc: HUEY_P_Plugin_Development_Tools.py  Development tools for creating, testing, and managing documentation plugins. Includes a development server with hot-reloading, a plugin validator, and a scaffolding
+    imports:
+      - argparse
+      - logging
+      - re
+      - shutil
+      - sys
+      - tempfile
+      - time
+      - pathlib::Path
+      - typing::Any,Dict,List,Optional
+      - yaml
+      - watchdog.events::FileSystemEventHandler
+      - watchdog.observers::Observer
+    classes:
+      -
+        name: PluginDevelopmentServer
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - plugin_directory
+              - output_directory
+          -
+            name: start
+            args:
+              - self
+          -
+            name: stop
+            args:
+              - self
+          -
+            name: reload_plugin
+            args:
+              - self
+              - plugin_name
+          -
+            name: _test_plugin_execution
+            args:
+              - self
+              - plugin_name
+      -
+        name: PluginFileChangeHandler
+        bases:
+          - FileSystemEventHandler
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - dev_server
+          -
+            name: on_modified
+            args:
+              - self
+              - event
+          -
+            name: _get_plugin_name_from_path
+            args:
+              - self
+              - file_path
+      -
+        name: PluginGenerator
+        bases:
+
+        methods:
+          -
+            name: create_plugin
+            args:
+              - self
+              - plugin_name
+              - plugin_type
+              - output_dir
+          -
+            name: _create_manifest
+            args:
+              - self
+              - plugin_name
+              - plugin_type
+          -
+            name: _get_template
+            args:
+              - self
+  -
+    module: HUEY_P_SYS_ErrorRecovery.py
+    doc: HUEY_P System-Level Error Recovery Framework  Provides a comprehensive error handling and recovery system that goes beyond component-level error handling to offer system-wide resilience, graceful degr
+    imports:
+      - json
+      - logging
+      - threading
+      - time
+      - traceback
+      - collections::deque
+      - contextlib::contextmanager
+      - dataclasses::dataclass,field
+      - datetime::datetime,timedelta
+      - enum::Enum
+      - typing::Any,Callable,Dict,List,Optional,Set
+    classes:
+      -
+        name: ErrorSeverity
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: ComponentStatus
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: RecoveryStrategy
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: ErrorContext
+        bases:
+
+        methods:
+
+      -
+        name: ComponentHealth
+        bases:
+
+        methods:
+
+      -
+        name: CircuitBreaker
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - failure_threshold
+              - recovery_timeout
+          -
+            name: call
+            args:
+              - self
+              - func
+          -
+            name: _on_success
+            args:
+              - self
+          -
+            name: _on_failure
+            args:
+              - self
+          -
+            name: _should_attempt_reset
+            args:
+              - self
+      -
+        name: SystemHealthMonitor
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+          -
+            name: register_component
+            args:
+              - self
+              - component_id
+          -
+            name: update_component_health
+            args:
+              - self
+              - component_id
+              - status
+              - error
+      -
+        name: SystemRecoveryManager
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+          -
+            name: start
+            args:
+              - self
+          -
+            name: stop
+            args:
+              - self
+          -
+            name: register_component
+            args:
+              - self
+              - component_id
+          -
+            name: report_error
+            args:
+              - self
+              - component_id
+              - error_type
+              - error_message
+              - severity
+          -
+            name: protected_operation
+            args:
+              - self
+              - component_id
+              - operation_name
+  -
+    module: HUEY_P_ARCH_Integrated.py
+    doc: Integrated Documentation Data Architecture  Combines all solutions into a comprehensive documentation system that addresses all data architecture gaps with production-grade reliability. This serves as
+    imports:
+      - asyncio
+      - logging
+      - signal
+      - sys
+      - time
+      - dataclasses::dataclass
+      - datetime::datetime
+      - pathlib::Path
+      - typing::Any,Callable,Dict,List,Optional
+      - HUEY_P_COORD_ConcurrentProcessing::ConcurrentDocumentationCoordinator,ProcessingTask,ResourceType,TaskPriority
+      - HUEY_P_STATE_Documentation::DocumentationStateManager
+      - HUEY_P_SYS_RecoveryRollback::DocumentationBackupManager,DocumentationTransactionManager
+    classes:
+      -
+        name: SystemStatus
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: ProcessingRequest
+        bases:
+
+        methods:
+
+      -
+        name: IntegratedDocumentationSystem
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - workspace_dir
+              - max_workers
+          -
+            name: _setup_signal_handlers
+            args:
+              - self
+          -
+            name: _process_request
+            args:
+              - self
+              - request
+          -
+            name: _execute_processing_logic
+            args:
+              - self
+              - file_path
+  -
+    module: HUEY_P_COORD_ConcurrentProcessing.py
+    doc: Concurrent Processing Coordinator  Manages concurrent documentation processing tasks with proper coordination, dependency resolution, and resource management.
+    imports:
+      - asyncio
+      - logging
+      - threading
+      - time
+      - uuid
+      - concurrent.futures::Future,ProcessPoolExecutor,ThreadPoolExecutor
+      - dataclasses::dataclass,field
+      - datetime::datetime,timedelta
+      - enum::Enum,IntEnum
+      - queue::PriorityQueue
+      - typing::Any,Callable,Dict,List,Optional,Set,Tuple
+    classes:
+      -
+        name: TaskPriority
+        bases:
+          - IntEnum
+        methods:
+
+      -
+        name: TaskStatus
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: ResourceType
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: ProcessingTask
+        bases:
+
+        methods:
+
+      -
+        name: ResourceLock
+        bases:
+
+        methods:
+
+      -
+        name: DependencyGraph
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+          -
+            name: add_dependency
+            args:
+              - self
+              - task_id
+              - depends_on
+          -
+            name: get_ready_tasks
+            args:
+              - self
+              - all_tasks
+      -
+        name: ResourceManager
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+          -
+            name: acquire_resources
+            args:
+              - self
+              - task_id
+              - worker_id
+              - resources
+          -
+            name: release_resources
+            args:
+              - self
+              - task_id
+      -
+        name: ConcurrentDocumentationCoordinator
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - max_thread_workers
+              - max_process_workers
+          -
+            name: start
+            args:
+              - self
+          -
+            name: stop
+            args:
+              - self
+              - timeout
+          -
+            name: submit_task
+            args:
+              - self
+              - task
+          -
+            name: _coordinator_loop
+            args:
+              - self
+          -
+            name: _check_completed_futures
+            args:
+              - self
+          -
+            name: _process_ready_tasks
+            args:
+              - self
+          -
+            name: _start_task_execution
+            args:
+              - self
+              - task
+              - worker_id
+  -
+    module: HUEY_P_PROCESS_StreamingDocument.py
+    doc: Streaming Documentation Processor  Processes large specification documents without loading everything into memory. Provides incremental processing, progress tracking, and memory-efficient handling.
+    imports:
+      - io
+      - logging
+      - mmap
+      - queue
+      - re
+      - threading
+      - time
+      - dataclasses::dataclass,field
+      - enum::Enum
+      - pathlib::Path
+      - typing::Any,Callable,Dict,Iterator,List,Optional
+    classes:
+      -
+        name: ChunkType
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: DocumentChunk
+        bases:
+
+        methods:
+
+      -
+        name: ProcessingProgress
+        bases:
+
+        methods:
+          -
+            name: percentage
+            args:
+              - self
+      -
+        name: StreamingDocumentProcessor
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - chunk_size
+          -
+            name: add_progress_callback
+            args:
+              - self
+              - callback
+          -
+            name: cancel_processing
+            args:
+              - self
+          -
+            name: stream_process_file
+            args:
+              - self
+              - file_path
+          -
+            name: _stream_process_mmap
+            args:
+              - self
+              - mmapped_file
+              - total_size
+          -
+            name: _count_sections
+            args:
+              - self
+              - mmapped_file
+          -
+            name: _report_progress
+            args:
+              - self
+              - progress
+      -
+        name: IncrementalDocumentationProcessor
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - streaming_processor
+          -
+            name: start_workers
+            args:
+              - self
+              - num_workers
+          -
+            name: stop_workers
+            args:
+              - self
+          -
+            name: process_file_incrementally
+            args:
+              - self
+              - file_path
+          -
+            name: _worker_loop
+            args:
+              - self
+          -
+            name: _process_chunk
+            args:
+              - self
+              - chunk
+          -
+            name: _extract_component_data
+            args:
+              - self
+              - content
+          -
+            name: _extract_table_data
+            args:
+              - self
+              - content
+  -
+    module: HUEY_P_ARCH_Security.py
+    doc: HUEY_P Comprehensive Security Architecture  Provides a complete security framework for the HUEY_P system, addressing authentication, authorization, encryption, network security, and credential managem
+    imports:
+      - hashlib
+      - hmac
+      - json
+      - logging
+      - os
+      - secrets
+      - socket
+      - ssl
+      - threading
+      - time
+      - contextlib::contextmanager
+      - dataclasses::dataclass
+      - datetime::datetime,timedelta
+      - enum::Enum
+      - typing::Any,Dict,List,Optional,Tuple
+      - jwt
+      - cryptography.fernet::Fernet,InvalidToken
+      - cryptography.hazmat.primitives::hashes,serialization
+      - cryptography.hazmat.primitives.asymmetric::padding,rsa
+    classes:
+      -
+        name: SecurityLevel
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: ComponentType
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: PermissionType
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: SecurityPolicy
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - resource_name
+              - required_permissions
+              - encryption_required
+              - audit_required
+      -
+        name: CryptographyManager
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - master_key
+          -
+            name: _generate_rsa_keys
+            args:
+              - self
+          -
+            name: encrypt_data
+            args:
+              - self
+              - data
+          -
+            name: decrypt_data
+            args:
+              - self
+              - encrypted_data
+      -
+        name: AuthenticationManager
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - secret_key
+              - credential_store
+          -
+            name: authenticate_component
+            args:
+              - self
+              - component_id
+              - api_key
+              - component_type
+          -
+            name: _verify_api_key
+            args:
+              - self
+              - component_id
+              - api_key
+      -
+        name: AuthorizationManager
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+          -
+            name: check_permission
+            args:
+              - self
+              - component_id
+              - resource
+              - operation
+      -
+        name: SecurityAuditor
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - audit_log_path
+          -
+            name: log_event
+            args:
+              - self
+              - event_type
+              - details
+      -
+        name: SecureCredentialStore
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - store_path
+              - crypto_manager
+          -
+            name: store_credential
+            args:
+              - self
+              - key
+              - value
+          -
+            name: retrieve_credential
+            args:
+              - self
+              - key
+          -
+            name: _load_credentials
+            args:
+              - self
+          -
+            name: _save_credentials
+            args:
+              - self
+      -
+        name: SecurityManager
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+          -
+            name: _initialize_credentials
+            args:
+              - self
+          -
+            name: secure_operation
+            args:
+              - self
+              - component_id
+              - resource
+              - operation
+  -
+    module: HUEY_P_STATE_Documentation.py
+    doc: Documentation State Management Engine  Provides robust state management, recovery, and coordination for documentation processing. This module solves core data architecture gaps by providing a persiste
+    imports:
+      - hashlib
+      - json
+      - logging
+      - sqlite3
+      - threading
+      - time
+      - contextlib::contextmanager
+      - dataclasses::asdict,dataclass,field
+      - datetime::datetime,timedelta
+      - enum::Enum
+      - pathlib::Path
+      - typing::Any,Dict,Iterator,List,Optional
+    classes:
+      -
+        name: ProcessingState
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: ProcessingJob
+        bases:
+
+        methods:
+
+      -
+        name: DocumentationStateManager
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - db_path
+          -
+            name: _initialize_database
+            args:
+              - self
+          -
+            name: _connect
+            args:
+              - self
+          -
+            name: create_job
+            args:
+              - self
+              - file_path
+          -
+            name: update_job_state
+            args:
+              - self
+              - job_id
+              - state
+              - progress
+          -
+            name: acquire_lock
+            args:
+              - self
+              - resource_id
+              - job_id
+              - timeout_seconds
+  -
+    module: HUEY_P_PARSER_StructuredDocument.py
+    doc: 
+    imports:
+
+    classes:
+
+  -
+    module: HUEY_P_EXAMPLE_Plugins.py
+    doc: HUEY_P_Plugin_Implementation_Examples.py  Example plugin implementations demonstrating the plugin architecture. Shows how different documentation types can be created as isolated plugins.
+    imports:
+      - json
+      - dataclasses::dataclass
+      - datetime::datetime
+      - typing::Any,Dict,List
+      - plugin_architecture::DocumentGeneratorPlugin,PluginExecutionContext,PluginMetadata,PluginType
+    classes:
+      -
+        name: DiagramGeneratorPlugin
+        bases:
+          - DocumentGeneratorPlugin
+        methods:
+          -
+            name: get_metadata
+            args:
+              - self
+          -
+            name: validate_configuration
+            args:
+              - self
+              - config
+          -
+            name: initialize
+            args:
+              - self
+              - config
+          -
+            name: generate_documents
+            args:
+              - self
+              - context
+          -
+            name: _generate_architecture_diagrams
+            args:
+              - self
+              - context
+          -
+            name: _create_mermaid_architecture
+            args:
+              - self
+              - arch_sections
+          -
+            name: cleanup
+            args:
+              - self
+  -
+    module: HUEY_P_SYS_DocumentAutomation.py
+    doc: HUEY_P_PY_Document_Automation_System.py  Automated system for maintaining synchronization between the Master Technical Specification (source of truth), derived component tables, and visual diagrams.  
+    imports:
+      - hashlib
+      - logging
+      - re
+      - dataclasses::dataclass,field
+      - datetime::datetime
+      - pathlib::Path
+      - typing::Dict,List,Optional
+      - watchdog.events::FileSystemEventHandler
+      - watchdog.observers::Observer
+    classes:
+      -
+        name: ComponentDefinition
+        bases:
+
+        methods:
+
+      -
+        name: DocumentParser
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - spec_file_path
+          -
+            name: extract_components
+            args:
+              - self
+          -
+            name: _parse_component_text
+            args:
+              - self
+              - name
+              - text
+      -
+        name: TableGenerator
+        bases:
+
+        methods:
+          -
+            name: generate_component_matrix
+            args:
+              - self
+              - components
+      -
+        name: DocumentUpdater
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - spec_file_path
+          -
+            name: update_tables
+            args:
+              - self
+              - tables
+      -
+        name: AutomationChangeHandler
+        bases:
+          - FileSystemEventHandler
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - system
+          -
+            name: on_modified
+            args:
+              - self
+              - event
+          -
+            name: _calculate_file_hash
+            args:
+              - self
+              - file_path
+      -
+        name: DocumentAutomationSystem
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - spec_file_path
+          -
+            name: start_monitoring
+            args:
+              - self
+          -
+            name: stop_monitoring
+            args:
+              - self
+          -
+            name: process_document_change
+            args:
+              - self
+  -
+    module: HUEY_P_MGMT_MasterData.py
+    doc: HUEY_P Master Data Management Solution  Provides a unified data governance framework to serve as a single source of truth across all system components. Includes schema evolution, data quality validati
+    imports:
+      - json
+      - logging
+      - re
+      - sqlite3
+      - dataclasses::asdict,dataclass,field
+      - datetime::datetime
+      - enum::Enum
+      - typing::Any,Dict,List,Optional
+      - redis
+    classes:
+      -
+        name: DataSourceType
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: DataQualityRule
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: DataDefinition
+        bases:
+
+        methods:
+
+      -
+        name: MasterDataRegistry
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - registry_db_path
+          -
+            name: _initialize_registry
+            args:
+              - self
+          -
+            name: _load_existing_definitions
+            args:
+              - self
+      -
+        name: DataQualityValidator
+        bases:
+
+        methods:
+          -
+            name: validate_data
+            args:
+              - self
+              - definition
+              - data_value
+      -
+        name: MasterDataManager
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - registry_db_path
+          -
+            name: _register_core_definitions
+            args:
+              - self
+  -
+    module: HUEY_P_FRAMEWORK_PluginArchitecture.py
+    doc: HUEY_P_PY_Plugin_Architecture_Framework.py  A plugin-based documentation generation system that allows for modular extension. This framework provides the core capabilities for plugin discovery, loadin
+    imports:
+      - importlib.util
+      - inspect
+      - json
+      - logging
+      - sys
+      - traceback
+      - abc::ABC,abstractmethod
+      - concurrent.futures::ThreadPoolExecutor,Future
+      - dataclasses::asdict,dataclass
+      - datetime::datetime
+      - enum::Enum
+      - pathlib::Path
+      - typing::Any,Callable,Dict,List,Optional,Set,Tuple
+      - yaml
+    classes:
+      -
+        name: PluginStatus
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: PluginType
+        bases:
+          - Enum
+        methods:
+
+      -
+        name: PluginMetadata
+        bases:
+
+        methods:
+
+      -
+        name: PluginExecutionContext
+        bases:
+
+        methods:
+
+      -
+        name: PluginInterface
+        bases:
+          - ABC
+        methods:
+          -
+            name: get_metadata
+            args:
+              - self
+          -
+            name: validate_configuration
+            args:
+              - self
+              - config
+          -
+            name: initialize
+            args:
+              - self
+              - config
+          -
+            name: execute
+            args:
+              - self
+              - context
+          -
+            name: cleanup
+            args:
+              - self
+      -
+        name: DocumentGeneratorPlugin
+        bases:
+          - PluginInterface
+        methods:
+          -
+            name: generate_documents
+            args:
+              - self
+              - context
+          -
+            name: execute
+            args:
+              - self
+              - context
+      -
+        name: PluginRegistry
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - plugin_directories
+          -
+            name: discover_plugins
+            args:
+              - self
+          -
+            name: register_plugin
+            args:
+              - self
+              - metadata
+      -
+        name: PluginLoader
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - registry
+          -
+            name: load_plugin
+            args:
+              - self
+              - plugin_name
+          -
+            name: _find_plugin_module
+            args:
+              - self
+              - plugin_name
+          -
+            name: _find_plugin_class
+            args:
+              - self
+              - module
+      -
+        name: PluginExecutor
+        bases:
+
+        methods:
+          -
+            name: __init__
+            args:
+              - self
+              - registry
+              - max_workers
+          -
+            name: execute_plugins
+            args:
+              - self
+              - plugin_names
+              - context
+          -
+            name: _execute_single
+            args:
+              - self
+              - plugin_name
+              - context
