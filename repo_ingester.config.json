@@ -1,0 +1,57 @@
+{
+  "db": "C:\\\\path\\\\to\\\\huey_project_organizer.db",
+  "exclude_dirs": [
+    "temp",
+    "output",
+    ".pytest_cache"
+  ],
+  "exclude_globs": [
+    "**/*.tmp",
+    "**/*.bak",
+    "**/backups/**",
+    "**/*.png",
+    "**/*.jpg"
+  ],
+  "auto_component_map": {
+    "custom_ea": "MT4 Execution Engine",
+    "signals_output": "Signal Framework"
+  },
+  "path_component_rules": [
+    {
+      "type": "glob",
+      "pattern": "**/MQL4/Experts/**",
+      "component": "MT4 Execution Engine"
+    },
+    {
+      "type": "regex",
+      "pattern": ".*/mt4_dde_interface/.*",
+      "component": "Communication Bridge"
+    }
+  ],
+  "category_by_ext": {
+    ".drawio": "doc",
+    ".schema.json": "schema"
+  },
+  "tag_static": [
+    "project_huey"
+  ],
+  "tag_by_ext": {
+    ".mq4": [
+      "mql4",
+      "ea"
+    ],
+    ".py": [
+      "python"
+    ]
+  },
+  "tag_by_folder": {
+    "mt4_dde_interface": [
+      "dde"
+    ],
+    "indicators": [
+      "ta"
+    ]
+  },
+  "default_component": "Configuration & Schemas",
+  "max_hash_mb_default": 4
+}
