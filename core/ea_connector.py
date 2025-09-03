@@ -13,17 +13,23 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List
 import uuid
 
+from .constraint_repository import TradingConstraintRepository
+
 logger = logging.getLogger(__name__)
 
 class EAConnector:
     """Handles communication with HUEY_P EA through C++ bridge"""
-    
-    def __init__(self, config: Dict[str, Any]):
+
+    def __init__(self, config: Dict[str, Any],
+                 constraint_repo: Optional[TradingConstraintRepository] = None):
         self.config = config
         self.host = config.get('host', 'localhost')
         self.port = config.get('port', 9999)
         self.timeout = config.get('timeout', 5)
         self.retry_interval = config.get('retry_interval', 10)
+
+        # Optional repository for dynamic constraints
+        self.constraint_repo = constraint_repo
         
         # Connection management
         self.socket = None
@@ -270,8 +276,8 @@ class EAConnector:
             # Extract live metrics from status response
             statistics = status_data.get('statistics', {})
             health_checks = status_data.get('health_checks', {})
-            
-            return {
+
+            metrics = {
                 'ea_state': health_checks.get('ea_state', 'UNKNOWN'),
                 'recovery_state': health_checks.get('recovery_state', 'UNKNOWN'),
                 'active_trades': statistics.get('active_trades', 0),
@@ -284,6 +290,18 @@ class EAConnector:
                 'connection_status': health_checks.get('connection_status', 'UNKNOWN'),
                 'last_trade_time': statistics.get('last_trade_time', None)
             }
+
+            # Evaluate dynamic constraints if repository available
+            if self.constraint_repo:
+                results = self.constraint_repo.evaluate(
+                    metrics,
+                    {"constraint_type": "system_health"}
+                )
+                metrics["constraint_violations"] = [
+                    name for name, passed in results.items() if not passed
+                ]
+
+            return metrics
         
         return None
     
