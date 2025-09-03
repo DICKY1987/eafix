@@ -1,0 +1,15 @@
+id: validation_engine
+name: "Validation Engine"
+version: "0.1.0"
+entrypoint: "plugins.validation_engine.plugin:run"
+capabilities:
+  - command: validate
+    inputs:
+      input_file: {type: path, required: true}
+    outputs:
+      diagnostics: {type: list[object]}
+policies:
+  io:
+    read: ["*.yaml", "*.yml", "registries/*.yaml"]
+    write: []
+  network: false

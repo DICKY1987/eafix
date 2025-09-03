@@ -1,0 +1,108 @@
+# registries/actors.yaml
+version: 1
+
+lanes:
+  HUMAN:   "Human"
+  CORE:    "APF Core"
+  PLUGIN:  "Plugin"
+  SERVICE: "Service"
+  STORAGE: "Storage"
+
+actors:
+  - id: user
+    label: User
+    kind: HUMAN
+    lane: HUMAN
+    description: Primary human author/reviewer of specifications.
+    aliases: [analyst, author, reviewer]
+
+  - id: operator
+    label: Operator
+    kind: HUMAN
+    lane: HUMAN
+    description: Executes and supervises runs; handles approvals.
+    aliases: [approver]
+
+  - id: system
+    label: APF System
+    kind: CORE
+    lane: CORE
+    description: Generic system actor when no specific component applies.
+    aliases: [apf, engine]
+
+  - id: orchestrator
+    label: Orchestrator
+    kind: SERVICE
+    lane: SERVICE
+    description: Coordinates jobs, fan‑out/fan‑in, and state transitions.
+    aliases: [coordinator]
+
+  - id: importer
+    label: Importer
+    kind: PLUGIN
+    lane: PLUGIN
+    description: Prose/structured document importer to APF models.
+    aliases: [parser]
+
+  - id: validator
+    label: Validator
+    kind: PLUGIN
+    lane: PLUGIN
+    description: Runs schema and semantic checks to produce diagnostics.
+
+  - id: sequencer
+    label: Step Sequencer
+    kind: PLUGIN
+    lane: PLUGIN
+    description: Performs insert/renumber operations on steps and branches.
+
+  - id: diagrammer
+    label: Diagram Exporter
+    kind: PLUGIN
+    lane: PLUGIN
+    description: Produces Draw.io/Mermaid outputs from ProcessFlow.
+    aliases: [drawio, diagram_exporter]
+
+  - id: exporter
+    label: Exporter
+    kind: PLUGIN
+    lane: PLUGIN
+    description: Emits YAML/JSON/MD and other artifacts.
+
+  - id: recovery
+    label: Recovery Engine
+    kind: SERVICE
+    lane: SERVICE
+    description: Snapshots, transactions, and rollback.
+
+  - id: security_policy
+    label: Security Policy
+    kind: SERVICE
+    lane: SERVICE
+    description: Enforces IO/network capability rules for plugins.
+    aliases: [security]
+
+  - id: process_library
+    label: Process Library
+    kind: STORAGE
+    lane: STORAGE
+    description: Stores reusable step/templates with versions.
+
+  - id: desktop_app
+    label: Desktop App
+    kind: SERVICE
+    lane: SERVICE
+    description: PySide6 UI shell and editor.
+    aliases: [gui]
+
+  - id: cli
+    label: CLI
+    kind: SERVICE
+    lane: SERVICE
+    description: Command‑line entrypoint and subcommands.
+
+  - id: service
+    label: HTTP Service
+    kind: SERVICE
+    lane: SERVICE
+    description: FastAPI layer exposing /export, /validate, /decide, /watch.
