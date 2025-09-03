@@ -1,6 +1,12 @@
 
 # tests/test_friday_vol_signal.py
 from datetime import datetime
+import pathlib
+import sys
+
+# Allow running tests without installing the package
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+
 from signals.friday_vol_signal import FridayVolSignal, FridayVolSignalConfig, UTC
 
 # Freeze to a known Friday after 14:00 Chicago: 2025-08-29 20:10:00 UTC
