@@ -275,10 +275,12 @@ class AppController:
                     self.trade_history.refresh_data()
             elif tab_index == 2 and self.system_status:
                 self.system_status.update_data(self.system_status_data, self.connection_status)
-            elif tab_index == 3 and self.economic_calendar:
+            elif tab_index == 3 and hasattr(self.dde_price_feed, 'refresh_data'):
+                self.dde_price_feed.refresh_data()
+            elif tab_index == 4 and self.economic_calendar:
                 # Economic calendar doesn't need frequent updates
                 pass
-            elif tab_index == 4 and self.settings_panel:
+            elif tab_index == 5 and self.settings_panel:
                 # Settings panel doesn't need frequent updates
                 pass
                 
