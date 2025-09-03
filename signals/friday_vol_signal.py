@@ -3,10 +3,11 @@
 from dataclasses import dataclass
 from datetime import datetime, time
 from typing import Optional, Dict, Callable
-import pytz
+from zoneinfo import ZoneInfo
 
-CHI = pytz.timezone("America/Chicago")
-UTC = pytz.UTC
+# Use the standard library's zoneinfo to avoid third-party dependencies
+CHI = ZoneInfo("America/Chicago")
+UTC = ZoneInfo("UTC")
 
 @dataclass
 class FridayVolSignalConfig:
@@ -36,14 +37,15 @@ class FridayVolSignal:
         self._last_triggered: Dict[str, datetime.date] = {}
 
     def _current_chicago(self, now_utc: Optional[datetime] = None) -> datetime:
-        now_utc = now_utc or datetime.utcnow().replace(tzinfo=UTC)
+        """Return the current time in Chicago, defaulting to now."""
+        now_utc = now_utc or datetime.now(tz=UTC)
         return now_utc.astimezone(CHI)
 
     def _window_bounds_utc(self, ref_utc: Optional[datetime] = None):
         now_chi = self._current_chicago(ref_utc)
         # Ensure we compute for "today" in Chicago
-        start_chi = CHI.localize(datetime.combine(now_chi.date(), self.cfg.start_local))
-        end_chi   = CHI.localize(datetime.combine(now_chi.date(), self.cfg.end_local))
+        start_chi = datetime.combine(now_chi.date(), self.cfg.start_local, tzinfo=CHI)
+        end_chi = datetime.combine(now_chi.date(), self.cfg.end_local, tzinfo=CHI)
         return start_chi.astimezone(UTC), end_chi.astimezone(UTC), now_chi
 
     def _is_friday(self, chi_dt: datetime) -> bool:
@@ -72,7 +74,7 @@ class FridayVolSignal:
         start_utc, end_utc, now_chi = self._window_bounds_utc(now_utc)
 
         # Only act on Fridays and only after the window end
-        end_local_dt = CHI.localize(datetime.combine(now_chi.date(), self.cfg.end_local))
+        end_local_dt = datetime.combine(now_chi.date(), self.cfg.end_local, tzinfo=CHI)
         if not self._is_friday(now_chi):
             return None
         if now_chi < end_local_dt:
