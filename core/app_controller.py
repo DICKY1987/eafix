@@ -15,6 +15,7 @@ import asyncio
 from .database_manager import DatabaseManager
 from .ea_connector import EAConnector
 from .data_models import SystemStatus as SystemStatusData, LiveMetrics, TradeData
+from .constraint_repository import TradingConstraintRepository
 
 from tabs.live_dashboard import LiveDashboard
 from tabs.trade_history import TradeHistory
@@ -47,6 +48,9 @@ class AppController:
         # Data containers
         self.system_status_data = SystemStatusData()
         self.live_metrics_data = LiveMetrics()
+
+        # Constraint repository
+        self.constraint_repo = None
         
         # Update control
         self.update_thread = None
@@ -142,9 +146,16 @@ class AppController:
             logger.info("Database connected successfully")
         else:
             logger.warning("Database connection failed")
-        
+
+        # Initialize constraint repository
+        self.constraint_repo = TradingConstraintRepository(
+            self.config.get('constraint_db', 'trading_constraints.db')
+        )
+
         # Initialize EA connector
-        self.ea_connector = EAConnector(self.config['ea_bridge'])
+        self.ea_connector = EAConnector(
+            self.config['ea_bridge'], constraint_repo=self.constraint_repo
+        )
         if self.ea_connector.connect():
             self.connection_status['ea_bridge'] = True
             logger.info("EA bridge connected successfully")
@@ -367,8 +378,11 @@ class AppController:
         # Close connections
         if self.ea_connector:
             self.ea_connector.disconnect()
-        
+
         if self.db_manager:
             self.db_manager.disconnect()
+
+        if self.constraint_repo:
+            self.constraint_repo.close()
         
         logger.info("Application controller shutdown complete")
