@@ -1,16 +1,3 @@
-"""
-HUEY_P Trading Interface - Tabs Package
-Contains UI tab implementations for different application views
-"""
+"""Tabs package for the HUEY_P trading interface."""
 
-from .live_dashboard import LiveDashboard
-from .trade_history import TradeHistory
-from .system_status import SystemStatus as SystemStatusTab
-from .settings_panel import SettingsPanel
-
-__all__ = [
-    'LiveDashboard',
-    'TradeHistory', 
-    'SystemStatusTab',
-    'SettingsPanel'
-]
+__all__ = []

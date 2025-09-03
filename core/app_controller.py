@@ -22,6 +22,7 @@ from tabs.system_status import SystemStatusTab
 from tabs.settings_panel import SettingsPanel
 from tabs.economic_calendar import EconomicCalendar
 from tabs.dde_price_feed import create_dde_tab
+from tabs.indicator_tab import IndicatorsTab
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ class AppController:
         self.system_status = None
         self.settings_panel = None
         self.economic_calendar = None
+        self.indicators_tab = None
         
         # Data containers
         self.system_status_data = SystemStatusData()
@@ -171,8 +173,12 @@ class AppController:
         # Tab 5: Economic Calendar
         self.economic_calendar = EconomicCalendar(self.notebook, self)
         self.notebook.add(self.economic_calendar.frame, text="📅 Economic Calendar")
-        
-        # Tab 6: Settings
+
+        # Tab 6: Indicators
+        self.indicators_tab = IndicatorsTab(self.notebook, self)
+        self.notebook.add(self.indicators_tab.frame, text="📐 Indicators")
+
+        # Tab 7: Settings
         self.settings_panel = SettingsPanel(self.notebook, self)
         self.notebook.add(self.settings_panel.frame, text="⚙️ Settings")
         
