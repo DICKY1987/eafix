@@ -1,18 +1,29 @@
-"""
-HUEY_P Trading Interface - Core Package
-Contains the main application logic and data management
-"""
+"""Core package for the HUEY_P trading interface."""
 
-from .app_controller import AppController
-from .database_manager import DatabaseManager  
-from .ea_connector import EAConnector
-from .data_models import SystemStatus, LiveMetrics, TradeData
+from importlib import import_module
+from typing import Any
 
 __all__ = [
     'AppController',
-    'DatabaseManager', 
+    'DatabaseManager',
     'EAConnector',
     'SystemStatus',
-    'LiveMetrics', 
-    'TradeData'
+    'LiveMetrics',
+    'TradeData',
 ]
+
+_definitions = {
+    'AppController': 'core.app_controller',
+    'DatabaseManager': 'core.database_manager',
+    'EAConnector': 'core.ea_connector',
+    'SystemStatus': 'core.data_models',
+    'LiveMetrics': 'core.data_models',
+    'TradeData': 'core.data_models',
+}
+
+
+def __getattr__(name: str) -> Any:  # pragma: no cover - thin wrapper
+    if name in _definitions:
+        module = import_module(_definitions[name])
+        return getattr(module, name)
+    raise AttributeError(f"module 'core' has no attribute '{name}'")

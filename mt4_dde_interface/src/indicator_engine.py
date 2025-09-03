@@ -154,12 +154,15 @@ class IndicatorEngine:
         # Register price callback
         self.price_manager_callback_id = None
         self._register_price_callback()
-    
+
     def _register_price_callback(self):
         """Register callback with price manager for automatic updates"""
-        # This would need to be implemented based on PriceManager's callback system
-        # For now, we'll assume manual updates through update_indicators method
-        pass
+        if hasattr(self.price_manager, 'add_callback'):
+            self.price_manager.add_callback(self._on_price_tick)
+
+    def _on_price_tick(self, tick: PriceTick):
+        """Internal handler for price manager callbacks"""
+        self.update_indicators(tick.symbol, tick.mid_price)
     
     def add_indicator(self, symbol: str, indicator_type: str, name: str, 
                      config: Dict, enabled: bool = True) -> bool:

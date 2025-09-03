@@ -15,6 +15,7 @@ import asyncio
 from .database_manager import DatabaseManager
 from .ea_connector import EAConnector
 from .data_models import SystemStatus as SystemStatusData, LiveMetrics, TradeData
+from .constraint_repository import TradingConstraintRepository
 
 from tabs.live_dashboard import LiveDashboard
 from tabs.trade_history import TradeHistory
@@ -22,6 +23,7 @@ from tabs.system_status import SystemStatusTab
 from tabs.settings_panel import SettingsPanel
 from tabs.economic_calendar import EconomicCalendar
 from tabs.dde_price_feed import create_dde_tab
+from tabs.indicator_tab import IndicatorsTab
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +45,14 @@ class AppController:
         self.system_status = None
         self.settings_panel = None
         self.economic_calendar = None
+        self.indicators_tab = None
         
         # Data containers
         self.system_status_data = SystemStatusData()
         self.live_metrics_data = LiveMetrics()
+
+        # Constraint repository
+        self.constraint_repo = None
         
         # Update control
         self.update_thread = None
@@ -142,9 +148,16 @@ class AppController:
             logger.info("Database connected successfully")
         else:
             logger.warning("Database connection failed")
-        
+
+        # Initialize constraint repository
+        self.constraint_repo = TradingConstraintRepository(
+            self.config.get('constraint_db', 'trading_constraints.db')
+        )
+
         # Initialize EA connector
-        self.ea_connector = EAConnector(self.config['ea_bridge'])
+        self.ea_connector = EAConnector(
+            self.config['ea_bridge'], constraint_repo=self.constraint_repo
+        )
         if self.ea_connector.connect():
             self.connection_status['ea_bridge'] = True
             logger.info("EA bridge connected successfully")
@@ -171,8 +184,12 @@ class AppController:
         # Tab 5: Economic Calendar
         self.economic_calendar = EconomicCalendar(self.notebook, self)
         self.notebook.add(self.economic_calendar.frame, text="📅 Economic Calendar")
-        
-        # Tab 6: Settings
+
+        # Tab 6: Indicators
+        self.indicators_tab = IndicatorsTab(self.notebook, self)
+        self.notebook.add(self.indicators_tab.frame, text="📐 Indicators")
+
+        # Tab 7: Settings
         self.settings_panel = SettingsPanel(self.notebook, self)
         self.notebook.add(self.settings_panel.frame, text="⚙️ Settings")
         
@@ -275,10 +292,12 @@ class AppController:
                     self.trade_history.refresh_data()
             elif tab_index == 2 and self.system_status:
                 self.system_status.update_data(self.system_status_data, self.connection_status)
-            elif tab_index == 3 and self.economic_calendar:
+            elif tab_index == 3 and hasattr(self.dde_price_feed, 'refresh_data'):
+                self.dde_price_feed.refresh_data()
+            elif tab_index == 4 and self.economic_calendar:
                 # Economic calendar doesn't need frequent updates
                 pass
-            elif tab_index == 4 and self.settings_panel:
+            elif tab_index == 5 and self.settings_panel:
                 # Settings panel doesn't need frequent updates
                 pass
                 
@@ -365,8 +384,11 @@ class AppController:
         # Close connections
         if self.ea_connector:
             self.ea_connector.disconnect()
-        
+
         if self.db_manager:
             self.db_manager.disconnect()
+
+        if self.constraint_repo:
+            self.constraint_repo.close()
         
         logger.info("Application controller shutdown complete")
