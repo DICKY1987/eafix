@@ -1,0 +1,361 @@
+Main Task: Implement DDE-driven Percent-Change & Currency-Strength System
+
+Sub-task: Capture real-time ticks from MT4 via DDE and compute mid-prices
+
+Constraint: Use existing dde_client.py as the only market data transport; no Excel/VBA components exist or should be reintroduced.
+
+Required Format/Data/Output: For each subscribed symbol, ingest {timestamp, bid, ask}; compute mid = (bid+ask)/2 and persist in an in-memory time-ordered buffer per symbol.
+
+Sub-task: Maintain rolling price history sufficient for multi-window percent change
+
+Constraint: Minimum windows: 15m, 1h, 4h, 8h, 12h, 24h; store enough history to compute all windows with a small buffer (e.g., window + 5 minutes).
+
+Required Format/Data/Output: API method get_percent_changes(symbol) -> {'15m': float, '1h': float, '4h': float, '8h': float, '12h': float, '24h': float} with percent values (e.g., +0.23 means +0.23%).
+
+Sub-task: Compute Currency Strength Index (CSI) per currency
+
+Constraint: For a pair BASE/QUOTE, the pair’s percent change contributes +Δ% to BASE and −Δ% to QUOTE. Use only pairs present in the feed; do not assume full cross coverage.
+
+Required Format/Data/Output: API compute_currency_strength() -> { 'USD': {'15m': float, ...}, 'EUR': {...}, ... } averaging contributions across all pairs that include the currency for each window.
+
+Main Task: Add “Strength & % Change” GUI Tab
+
+Sub-task: Render per-pair percent-change table
+
+Constraint: Use Tkinter UI; no third-party GUI frameworks.
+
+Required Format/Data/Output: New tab “Strength & % Change” with a Treeview table labeled “Pair % Change” and columns Name, 15m, 1h, 4h, 8h, 12h, 24h. Values formatted to two decimals with %.
+
+Sub-task: Render per-currency strength table
+
+Constraint: Same windows and formatting conventions as per-pair table; values represent the averaged CSI for each window.
+
+Required Format/Data/Output: A second Treeview labeled “Currency Strength (avg of pair moves)” with columns Name, 15m, 1h, 4h, 8h, 12h, 24h.
+
+Main Task: Create Currency-Strength–Based Oscillators
+
+Sub-task: Define a canonical per-currency strength time series
+
+Constraint: Choose one or support both:
+
+Composite rolling Δ%: S_CCY[t] = Σ_h (w_h * Δ%_h_CCY[t]) with example weights {15m:0.4, 1h:0.3, 4h:0.2, 24h:0.1}.
+
+Smoothed index: S_CCY[t] = α * S_CCY[t-1] + (1−α) * current_strength, then (optionally) normalize.
+
+Required Format/Data/Output: A strength feed accessor get_strength_series(currency, count=None) -> list[float] returning most-recent-last samples.
+
+Sub-task: Normalize strength series (recommended for oscillators)
+
+Constraint: Implement at least one normalization: Percent Rank over rolling window N (preferred), Z-score over window N, or min–max over N.
+
+Required Format/Data/Output: Functions:
+
+rolling_percent_rank(values, window) -> float in [0,100]
+
+rolling_zscore(values, window) -> float
+
+Sub-task: Implement oscillator indicators on strength
+
+Constraint: Extend the existing indicator framework (BaseIndicator/MultiValueIndicator); register with IndicatorFactory. Use strength feed as the data source rather than prices.
+
+Required Format/Data/Output: Classes and configs:
+
+StrengthRSI(currency, period) → value in [0,100]; OB/OS bands at 70/30 (or 80/20).
+
+StrengthStochastic(currency OR (base,quote), k_period, d_period) → %K/%D in [0,100] based on strength range or differential D[t] = S_BASE−S_QUOTE.
+
+StrengthZScore(currency, window) → z-score with OB/OS bands at ±2 and inner ±1.
+
+Sub-task: Differential oscillator for pairs
+
+Constraint: For pair-level decisions, compute D[t] = S_BASE[t] − S_QUOTE[t] and run RSI/Stoch/MACD on D[t].
+
+Required Format/Data/Output: Indicator configs accept either currency='USD' or base='EUR', quote='USD' to switch between single-currency and differential modes.
+
+Main Task: Build Conditional-Probability Scanner (Offline)
+
+Sub-task: Define trigger grid X and outcome Y
+
+Constraint: Initial grid (configurable):
+
+Burst thresholds M (pips): {10, 15}
+
+Burst windows W (minutes): {10, 15}
+
+Forward targets K (pips): {15, 25}
+
+Forward windows T (minutes): {60, 180}
+Direction of X is sign of the burst move; only use data up to trigger time.
+
+Required Format/Data/Output: Trigger label "M≥{M}@{W}m", outcome label "→{K}@{T}m", direction "up" or "down".
+
+Sub-task: Compute P(Y|X) from M1 history (6–12 months)
+
+Constraint: No look-ahead bias; only include events whose forward window fully completes in history. Handle missing timestamps by DatetimeIndex.searchsorted. Enforce symbol pip precision (e.g., 0.0001 vs 0.01 for JPY).
+Use Laplace smoothing α=1 when estimating probabilities. Track sample counts.
+
+Required Format/Data/Output: Probability table with columns:
+symbol, trigger, outcome, dir, state(tuple), succ(int), tot(int), p(float)
+where state is a tuple of optional indicator/CSI regime labels (e.g., ('RSI:30-70',)).
+
+Sub-task: State conditioning from indicators/CSI (optional but recommended)
+
+Constraint: Transform popular indicators into discrete states/buckets; do not use raw values directly.
+
+Required Format/Data/Output: Example state builders:
+
+RSI zones: <30, 30–70, >70 (single label).
+
+MACD histogram sign/magnitude buckets.
+
+Bollinger %B deciles and Bandwidth regime.
+
+ATR/price regime buckets.
+
+CSI z-score buckets for currencies and/or D = S_BASE−S_QUOTE.
+
+Sub-task: Ranking and persistence
+
+Constraint: Keep only rows with tot ≥ 200 for production; rank by p then by tot descending. Store per symbol (CSV/SQLite).
+
+Required Format/Data/Output: For each symbol, export top_20 rows to symbol_conditional_table.csv (or a SQLite table).
+
+Main Task: Real-Time Conditional-Edge Engine (Online)
+
+Sub-task: Detect live triggers identically to offline rules
+
+Constraint: Evaluate on each new M1 close; for each W (sorted ascending), compare latest close to close at now−W. If |move| ≥ M, register trigger with dir ∈ {'up','down'}.
+
+Required Format/Data/Output: Function returns (trigger_label, dir) or None.
+
+Sub-task: Build current state key
+
+Constraint: Use the same state_fn used during offline scanning (e.g., RSI bucket). Do not mix definitions between training and runtime.
+
+Required Format/Data/Output: state_key: tuple[str,...] (may be empty).
+
+Sub-task: Lookup best historical edge
+
+Constraint: Match on symbol, trigger_label, dir, and (if non-empty) exact state_key. Enforce a minimum n_min (e.g., 50) at runtime before displaying/using.
+
+Required Format/Data/Output: Return top row by p (then tot) and expose {p, tot, trigger, outcome, dir, state}.
+
+Main Task: Add “Conditional Edge” GUI Panel
+
+Sub-task: Panel layout and data
+
+Constraint: Use provided ConditionalEdgePanel widget (Tkinter). Show a live “best match” label and a ranked table of the top rows for the active symbol.
+
+Required Format/Data/Output:
+
+Top table columns: trigger, outcome, dir, state, p (percent), tot
+
+Live label: “Live best match: {trigger} {dir} | {outcome} | p={p:.2%} n={tot}”
+
+Sub-task: Wiring
+
+Constraint: Load the precomputed table at app start; refresh the live best match after each M1 completion or on a 60-sec timer if bar boundary detection is not available.
+
+Required Format/Data/Output: App fields: self.cond_table (DataFrame), self.cond_panel (UI), symbol context, n_min threshold.
+
+Main Task: Pip Normalization & Symbol Metadata
+
+Sub-task: Derive pip size correctly per symbol
+
+Constraint: Use digits metadata where available; otherwise, use symbol suffix heuristic (e.g., *JPY → 0.01, others 0.0001). Do not hardcode per-symbol values outside metadata/heuristics.
+
+Required Format/Data/Output: Function pip_size_for_symbol(symbol, digits=None) -> float.
+
+Main Task: Data Requirements for Offline Scanner
+
+Sub-task: Load long-horizon M1 bars
+
+Constraint: Input DataFrame requires columns time, open, high, low, close. time must be parseable to datetime64 and set as sorted DatetimeIndex.
+
+Required Format/Data/Output: Ensure at least 6–12 months per symbol for stable probabilities; exclude incomplete forward windows.
+
+Main Task: Signal Governance & Guardrails
+
+Sub-task: Avoid statistical pitfalls
+
+Constraint: No look-ahead; consistent trigger/state definitions across train vs live; suppress low-sample rows in live view (e.g., n < 50). Consider Wilson/Beta intervals before promoting to trade decisions.
+
+Required Format/Data/Output: For each live signal, include n (sample size) alongside p and provide clear indication (e.g., grayed text) when n < n_min.
+
+Sub-task: Regime filters
+
+Constraint: Always include a volatility/bandwidth regime (ATR or BB Bandwidth) as an optional state to segment probabilities by market regime.
+
+Required Format/Data/Output: Add an optional column regime to the state tuple (e.g., ('ATR:high',)).
+
+Main Task: Integration with Existing Codebase
+
+Sub-task: Place provided modules into the project
+
+Constraint: Newly generated files:
+
+conditional_signals.py (offline scanner + runtime matcher; also contains state_rsi_bucket, state_none, and pip utility).
+
+ui_conditional_edge.py (Tkinter panel).
+
+Required Format/Data/Output: Import and use in main_tab.py (or the primary UI orchestrator). Ensure state column is loaded as tuples (e.g., CSV converters={"state": eval}).
+
+Sub-task: Add/update APIs in price_manager.py
+
+Constraint: Expose:
+
+add_price_tick(symbol, tick_dict) with automatic pruning to max needed history.
+
+get_percent_changes(symbol) -> dict for required windows.
+
+get_available_symbols() -> list[str] and get_latest_mid(symbol) -> float|None.
+
+Required Format/Data/Output: Methods must be thread-safe if ticks arrive on background callbacks.
+
+Sub-task: Add currency strength computation module
+
+Constraint: Implement compute_currency_strength(price_manager) -> dict[currency -> window->float] using the BASE/QUOTE contribution rule; handle symbol parsing (3+3 codes or /, _, - delimiters).
+
+Required Format/Data/Output: Return only currencies present in configured set (e.g., ["USD","EUR","GBP","JPY","CHF","AUD","CAD","NZD"]).
+
+Main Task: Testing & Validation
+
+Sub-task: Unit tests for percent-change windows and CSI aggregation
+
+Constraint: Synthetic sequences (monotonic up/down, flat, gaps) must yield correct % outputs and CSI signs.
+
+Required Format/Data/Output: Tests asserting:
+
+Correct window look-back matching (edge at boundary).
+
+CSI averages reflect included pairs; exclusion when absent.
+
+Sub-task: Scanner correctness tests
+
+Constraint: Backtest with synthetic M1 bars containing known bursts and forward moves; verify succ, tot, and p with/without Laplace smoothing.
+
+Required Format/Data/Output: Fixtures for multiple (M, W, K, T) combinations; ensure no look-ahead by construction.
+
+Sub-task: Runtime detector tests
+
+Constraint: Simulate recent bars and confirm _detect_burst_trigger returns the correct (trigger_label, dir) across thresholds and windows.
+
+Required Format/Data/Output: Table-driven test cases; assert no false positives when |move| < M.
+
+Sub-task: UI smoke tests
+
+Constraint: Ensure tables render and refresh without exceptions given empty data, low samples, and missing matches.
+
+Required Format/Data/Output: Programmatic creation of the panel and calls to load_table() and set_live_best() with representative data.
+
+Main Task: Performance, Logging, and Self-Healing
+
+Sub-task: Performance tracking
+
+Constraint: Leverage existing indicator timing/perf fields to measure scanner run time and live lookup latency; log spikes.
+
+Required Format/Data/Output: Log entries include timestamps, symbol, grid IDs, scanned rows, and total duration (ms).
+
+Sub-task: Error handling and recovery
+
+Constraint: Use central error handler; on DDE disconnects, auto-retry with backoff; if history buffers fall behind, surface a clear UI status and temporarily suspend dependent computations.
+
+Required Format/Data/Output: UI status banner or status bar icon for: DDE connected, historical scan complete, live matching active, and degraded states.
+
+Main Task: Configuration & Persistence
+
+Sub-task: Make windows and grids configurable
+
+Constraint: Expose the percent-change windows and trigger grid (M, W, K, T) via settings.json. Do not hardcode inside modules.
+
+Required Format/Data/Output: settings.json keys:
+
+"pct_windows_min": [15,60,240,480,720,1440]
+
+"trigger_grid": {"burst_pips":[10,15], "burst_window_min":[10,15], "fwd_pips":[15,25], "fwd_window_min":[60,180]}
+
+Sub-task: Persist probability tables
+
+Constraint: Save per-symbol tables after scanning; reload on app start. Validate schema and version; handle missing files gracefully.
+
+Required Format/Data/Output: CSV with headers exactly: symbol,trigger,outcome,dir,state,succ,tot,p. If CSV used, parse state back to tuples.
+
+Main Task: Operational Runbook (Step-by-Step)
+
+Sub-task: Choose the first trigger grid
+
+Constraint: Use the initial grid {M: [10,15], W: [10,15], K: [15,25], T: [60,180]}; store in settings; ensure pip normalization is correct for each symbol.
+
+Required Format/Data/Output: Confirm grid echo in logs on startup.
+
+Sub-task: Run the scanner on 6–12 months of M1 per symbol
+
+Constraint: Exclude incomplete forward windows; include state function (start with RSI bucket). Execute per symbol and persist outputs.
+
+Required Format/Data/Output: One CSV per symbol: SYMBOL_conditional_table.csv.
+
+Sub-task: Rank by p with n ≥ 200; keep top 10–20 rows per symbol
+
+Constraint: Filter by tot≥200 and sort by p desc, tot desc.
+
+Required Format/Data/Output: A filtered DataFrame persisted as SYMBOL_conditional_top.csv or stored in SQLite table conditional_top.
+
+Sub-task: Add a “Conditional Edge” panel to the GUI and surface the live best match
+
+Constraint: Load precomputed table(s) at startup; refresh live best match on each M1 close or every 60 seconds. Enforce runtime n_min (e.g., 50) before displaying.
+
+Required Format/Data/Output: Live label text and table rows updated in place; do not block the UI thread during IO—use periodic timers.
+
+Main Task: Deliverables & Artifacts
+
+Sub-task: Source files (new)
+
+Constraint: Include the following drop-in modules in the repository:
+
+conditional_signals.py — offline scanning, ranking helpers, runtime best-match function, pip utility, and example state_rsi_bucket/state_none.
+
+ui_conditional_edge.py — reusable Tkinter panel for the Conditional Edge.
+
+Required Format/Data/Output: Files integrated, imported, and referenced in the main application with no unresolved imports.
+
+Sub-task: Documentation
+
+Constraint: Provide a short README section describing:
+
+How to configure the grid and windows.
+
+How to run the historical scanner.
+
+Where the probability tables are stored.
+
+How the live panel determines the best match.
+
+Required Format/Data/Output: Markdown instructions embedded under a new “Conditional Probability Signals” header.
+
+Main Task: Trade Signal Consumption (Optional Next)
+
+Sub-task: Expose signals to the Execution Engine
+
+Constraint: Do not place trades automatically until confidence thresholds and risk filters are validated. Provide events/alerts only.
+
+Required Format/Data/Output: Event payload: {symbol, trigger, outcome, dir, p, n, state, timestamp} with a severity or confidence score derived from p and n.
+
+Main Task: Quality Gates
+
+Sub-task: Minimal acceptance criteria
+
+Constraint:
+
+Percent-change and CSI tables populate live within 1–2 seconds of ticks.
+
+Scanner completes per symbol without exceptions and produces non-empty tables.
+
+Conditional Edge panel renders top rows and updates live label on triggers.
+
+No look-ahead present (verified by unit tests).
+
+Configurable windows/grids take effect without code changes.
+
+Required Format/Data/Output: Test report (console or JSON) summarizing pass/fail for unit tests and smoke checks.
+
+This instruction set consolidates all requested features and constraints from the conversation into a single execution plan suitable for an autonomous agent to implement end-to-end.
