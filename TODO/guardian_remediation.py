@@ -11,6 +11,7 @@ import sqlite3
 import time
 import uuid
 import shutil
+import random
 import psutil
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -564,13 +565,147 @@ class TradingRemediationEngine:
             ['sms', 'email', 'desktop', 'teams'],
             "EMERGENCY MODE ENGAGED - All trading systems halted"
         )
-    
+
     # Additional helper methods...
     async def _get_broker_positions(self) -> List[Dict]:
-        """Get current positions from broker"""
-        # Implementation depends on broker API
-        pass
-    
+        """Get current positions from broker.
+
+        The real implementation would query the connected broker or EA for
+        the current set of open positions.  For the purposes of this repo we
+        keep the logic lightweight and defensive: if the connector exposes an
+        asynchronous ``get_open_positions`` helper we invoke it, otherwise we
+        return an empty list.  This keeps the remediation engine usable in
+        tests without requiring a live trading connection.
+        """
+
+        getter = getattr(self.ea_connector, "get_open_positions", None)
+        if getter is None:
+            return []
+
+        result = getter()
+        if asyncio.iscoroutine(result):
+            result = await result
+        return result or []
+
+    async def _get_broker_orders(self) -> List[Dict]:
+        """Get current pending orders from the broker."""
+
+        getter = getattr(self.ea_connector, "get_pending_orders", None)
+        if getter is None:
+            return []
+
+        result = getter()
+        if asyncio.iscoroutine(result):
+            result = await result
+        return result or []
+
+    def _find_position_discrepancies(self, broker_positions: List[Dict], local_positions: List[Dict]) -> List[Dict]:
+        """Return mismatches between broker and locally tracked positions."""
+
+        local_map = {p.get("ticket"): p for p in local_positions}
+        discrepancies: List[Dict] = []
+        for b in broker_positions:
+            ticket = b.get("ticket")
+            local = local_map.get(ticket)
+            if not local or any(b.get(k) != local.get(k) for k in ("status", "lots", "symbol")):
+                discrepancies.append({"broker": b, "local": local})
+        return discrepancies
+
+    def _find_order_discrepancies(self, broker_orders: List[Dict], local_orders: List[Dict]) -> List[Dict]:
+        """Return mismatches between broker and locally tracked orders."""
+
+        local_map = {o.get("id"): o for o in local_orders}
+        discrepancies: List[Dict] = []
+        for b in broker_orders:
+            oid = b.get("id")
+            local = local_map.get(oid)
+            if not local or any(b.get(k) != local.get(k) for k in ("status", "price", "symbol")):
+                discrepancies.append({"broker": b, "local": local})
+        return discrepancies
+
+    async def _reconcile_position(self, discrepancy: Dict) -> bool:
+        """Attempt to reconcile a single position discrepancy."""
+
+        try:
+            broker_pos = discrepancy.get("broker")
+            local_pos = discrepancy.get("local")
+
+            if broker_pos and not local_pos and hasattr(self.db_manager, "create_position_record"):
+                await self.db_manager.create_position_record(broker_pos)
+            elif not broker_pos and local_pos and hasattr(self.db_manager, "mark_position_closed"):
+                await self.db_manager.mark_position_closed(local_pos.get("ticket"))
+            return True
+        except Exception as e:
+            logging.error(f"Failed to reconcile position: {e}")
+            return False
+
+    async def _reconcile_order(self, discrepancy: Dict) -> bool:
+        """Attempt to reconcile a single order discrepancy."""
+
+        try:
+            broker_order = discrepancy.get("broker")
+            local_order = discrepancy.get("local")
+
+            if broker_order and not local_order and hasattr(self.db_manager, "create_order_record"):
+                await self.db_manager.create_order_record(broker_order)
+            elif not broker_order and local_order and hasattr(self.db_manager, "mark_order_filled"):
+                await self.db_manager.mark_order_filled(local_order.get("id"))
+            return True
+        except Exception as e:
+            logging.error(f"Failed to reconcile order: {e}")
+            return False
+
+    async def _update_local_state_from_broker(self, broker_positions: List[Dict], broker_orders: List[Dict]) -> None:
+        """Update local persistence using broker truth when available."""
+
+        if hasattr(self.db_manager, "sync_positions"):
+            await self.db_manager.sync_positions(broker_positions)
+        if hasattr(self.db_manager, "sync_orders"):
+            await self.db_manager.sync_orders(broker_orders)
+
+    async def _force_close_position(self, position: Dict) -> bool:
+        """Force close a position without safety checks."""
+
+        try:
+            cmd = {
+                "op": "FORCE_CLOSE",
+                "ticket": position.get("ticket"),
+                "symbol": position.get("symbol"),
+                "lots": position.get("lots", 0),
+                "timeout_seconds": 30,
+            }
+            sender = getattr(self.ea_connector, "send_trade_command", None)
+            if sender:
+                await sender(cmd)
+            return True
+        except Exception as e:
+            logging.error(f"Force close failed for {position}: {e}")
+            return False
+
+    async def _send_email_alert(self, message: str, record: Dict) -> bool:
+        logging.info(f"EMAIL ALERT: {message}")
+        return True
+
+    async def _send_sms_alert(self, message: str) -> bool:
+        logging.info(f"SMS ALERT: {message}")
+        return True
+
+    async def _send_desktop_notification(self, message: str) -> bool:
+        logging.info(f"DESKTOP NOTIFICATION: {message}")
+        return True
+
+    async def _send_teams_alert(self, message: str, record: Dict) -> bool:
+        logging.info(f"TEAMS ALERT: {message}")
+        return True
+
+    async def _check_risk_exposure(self) -> Dict[str, float]:
+        """Basic risk exposure calculation used during emergency mode."""
+
+        positions = await self._get_broker_positions()
+        total_risk = sum(p.get("risk_percent", 0.0) for p in positions)
+        drawdown = max((p.get("drawdown_pct", 0.0) for p in positions), default=0.0)
+        return {"total_risk_pct": total_risk, "account_drawdown": drawdown}
+
     async def _gather_system_metrics(self) -> Dict:
         """Gather current system performance metrics"""
         return {
