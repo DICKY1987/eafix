@@ -1,0 +1,158 @@
+{
+  "forexfactory": {
+    "url": "https://www.forexfactory.com/calendar",
+    "download_timeout": 30,
+    "retry_attempts": 3
+  },
+  
+  "paths": {
+    "downloads": "~/Downloads",
+    "output": "./processed_calendar", 
+    "archive": "./calendar_archive",
+    "logs": "./logs"
+  },
+  
+  "anticipation": {
+    "enabled": true,
+    "hours_before": [1, 2, 4],
+    "max_events_per_original": 3,
+    "only_for_high_impact": true
+  },
+  
+  "equity_markets": {
+    "enabled": true,
+    "markets": {
+      "Tokyo": {
+        "time": "21:00",
+        "timezone": "CST", 
+        "primary_pairs": ["USDJPY", "AUDJPY", "EURJPY"],
+        "impact_level": "Medium"
+      },
+      "London": {
+        "time": "02:00",
+        "timezone": "CST",
+        "primary_pairs": ["EURUSD", "GBPUSD", "EURGBP"], 
+        "impact_level": "Medium"
+      },
+      "New York": {
+        "time": "08:30",
+        "timezone": "CST",
+        "primary_pairs": ["EURUSD", "GBPUSD", "USDJPY", "USDCAD"],
+        "impact_level": "Medium"
+      }
+    }
+  },
+  
+  "filtering": {
+    "valid_impacts": ["High", "Medium"],
+    "excluded_countries": ["CHF"],
+    "exclude_weekends": true,
+    "weekend_block": {
+      "friday_after": "15:00",
+      "sunday_before": "18:00",
+      "timezone": "CST"
+    }
+  },
+  
+  "strategy_mapping": {
+    "regional_codes": {
+      "North America": {
+        "code": 1,
+        "countries": {
+          "USD": "01",
+          "CAD": "02"
+        }
+      },
+      "Europe": {
+        "code": 2, 
+        "countries": {
+          "EUR": "11",
+          "GBP": "12"
+        }
+      },
+      "Asia Pacific": {
+        "code": 3,
+        "countries": {
+          "JPY": "21",
+          "AUD": "22", 
+          "NZD": "23"
+        }
+      },
+      "Latin America": {
+        "code": 4,
+        "countries": {
+          "BRL": "31"
+        }
+      },
+      "Middle East Africa": {
+        "code": 5,
+        "countries": {
+          "ZAR": "41",
+          "TRY": "42"
+        }
+      }
+    },
+    "impact_codes": {
+      "Medium": "1",
+      "High": "2"
+    }
+  },
+  
+  "mt4_export": {
+    "separator": ";",
+    "date_format": "%Y.%m.%d %H:%M",
+    "default_parameters": {
+      "sl_pips": 20,
+      "tp_pips": 40,
+      "buffer_pips": 10,
+      "trailing_type": "step",
+      "lot_input": "AUTO",
+      "execution_window_minutes": 5,
+      "magic_number": 0,
+      "strategy": "calendar"
+    },
+    "impact_adjustments": {
+      "High": {
+        "sl_pips": 25,
+        "tp_pips": 50,
+        "trailing_type": "percent"
+      },
+      "Medium": {
+        "sl_pips": 15,
+        "tp_pips": 30,
+        "trailing_type": "step"
+      }
+    }
+  },
+  
+  "automation": {
+    "schedule": {
+      "day": "sunday",
+      "time": "12:00",
+      "timezone": "CST",
+      "retry_interval_hours": 1,
+      "max_retries": 24
+    },
+    "browser": {
+      "headless": false,
+      "download_timeout": 30,
+      "page_load_timeout": 10,
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+  },
+  
+  "logging": {
+    "level": "INFO",
+    "file": "calendar_downloader.log",
+    "format": "%(asctime)s - %(levelname)s - %(message)s",
+    "max_file_size_mb": 10,
+    "backup_count": 5
+  },
+  
+  "validation": {
+    "required_columns": ["Title", "Country", "Date", "Time", "Impact"],
+    "min_events_expected": 10,
+    "max_events_expected": 500,
+    "date_range_days": 14
+  }
+}

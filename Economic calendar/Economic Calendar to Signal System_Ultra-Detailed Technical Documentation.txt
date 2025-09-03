@@ -1,0 +1,2485 @@
+# # Economic Calendar to Signal System - Ultra-Detailed Technical Documentation
+
+## System Architecture Overview - Complete Calendar Processing Architecture
+
+The Economic Calendar to Signal System is a sophisticated automated calendar processing system enabling real-time economic event monitoring, intelligent anticipation event generation, and automated trading signal triggering based on economic calendar data for seamless integration with MT4-Excel trading systems.
+
+### Calendar to Signal Data Flow Architecture
+```
+Calendar Data Sources (CSV Files)
+    ↓ Automated Import (Sunday 12 PM + Retries)
+Calendar Import Engine (File Detection & Validation)
+    ↓ CSV Parsing & Data Transformation
+Calendar Data Processor (Standardization & Enhancement)
+    ↓ Event Processing & Anticipation Generation
+Event Enhancement Engine (Anticipation + Equity Markets)
+    ↓ Real-time Event Monitoring
+Event Trigger Engine (Timer-based Monitoring)
+    ↓ Parameter Set Selection & Signal Generation
+Signal Integration Layer (MT4 Signal Generation)
+    ↓ Signal Export & Execution
+Trading System Integration (Existing MT4-Excel System)
+```
+
+### **Calendar Processing Communication Model**:
+
+#### **Calendar Import Channel**:
+```
+Downloads Folder Monitoring
+    ↓ Priority-based file detection (ff_calendar*.csv, *thisweek*.csv)
+Calendar Import Engine
+    ↓ CSV validation and parsing
+Data Store Integration
+    ↓ Centralized calendar data storage
+Dashboard Integration
+```
+- **Data**: Economic events, dates, times, impact levels
+- **Frequency**: Sunday 12 PM CST + hourly retries for 24 hours
+- **Implementation**: File system monitoring + CSV processing
+- **Validation**: Comprehensive field validation + duplicate detection
+
+#### **Event Processing Channel**:
+```
+Raw Calendar Data
+    ↓ Time zone conversion (CST standardization)
+Data Transformation Pipeline
+    ↓ Impact filtering (High/Medium only)
+Event Enhancement Engine
+    ↓ Anticipation event generation + equity market injection
+Real-time Event Queue
+    ↓ Chronological sorting and conflict resolution
+```
+- **Data**: Processed events with anticipation events and market opens
+- **Processing**: Real-time transformation and enhancement
+- **Implementation**: Multi-stage processing pipeline
+- **Quality Control**: Field validation + duplicate detection + conflict resolution
+
+#### **Signal Triggering Channel**:
+```
+Event Trigger Monitoring
+    ↓ 15-second timer-based monitoring
+Event Time Detection
+    ↓ Offset-based trigger timing (-3 minutes default)
+Parameter Set Selection
+    ↓ Simple 4-set rotation (0.01, 0.02, 0.03, 0.04 lots)
+Signal Generation Integration
+    ↓ Existing SignalEntrySheet.bas integration
+```
+- **Data**: Trading signals with calendar event context
+- **Frequency**: Real-time monitoring with 15-second precision
+- **Implementation**: Timer system + existing signal infrastructure
+- **Parameters**: Fixed parameter sets differing only by lot size
+
+### **Calendar System Advantages**:
+1. **Automated Import**: No manual calendar management required
+2. **Intelligent Processing**: Duplicate detection + event enhancement
+3. **Real-time Monitoring**: Precise event timing with offset triggers
+4. **Seamless Integration**: Works with existing MT4-Excel infrastructure
+5. **Risk Management**: Built-in event blocking and validation
+6. **User Control**: Manual overrides and configuration flexibility
+
+---
+
+## Complete Module Architecture - Every Calendar Component Mapped
+
+### 🔵 CALENDAR SYSTEM VBA MODULES (.bas files)
+
+#### **PHASE 1: CORE INFRASTRUCTURE**
+
+##### **system_infrastructure.bas** - Critical System Foundation
+**Role**: Core system infrastructure - timers, file access, MT4 validation, state persistence
+**Dependencies**: None (Root infrastructure module)
+**Priority**: CRITICAL - Must load first before any calendar functionality
+
+**Core Functions**:
+```vba
+' System Initialization
+InitializeSystemInfrastructure() → Complete system setup and validation
+ValidateExcelEnvironment() → Check Excel version and macro settings
+InitializeFileSystemPaths() → Setup Downloads, Archive, MT4 paths
+ValidateFileSystemAccess() → Test folder access and permissions
+ValidateMT4Integration() → Verify MT4 connection and signal folders
+
+' Timer Management System  
+InitializeTimerSystem() → Setup 15-second monitoring timer
+StartSystemTimer() → Begin calendar monitoring loop
+SystemTimerCallback() → Main timer execution function
+StopSystemTimer() → Stop all calendar monitoring
+RecoverTimerSystem() → Automatic timer recovery on failure
+
+' File System Management
+CreateDirectoryIfNotExists(dirPath) → Safe directory creation
+TestFolderAccess(folderPath, folderName) → Validate folder permissions
+GetDownloadsPath() → Get user Downloads folder path
+GetArchivePath() → Get calendar archive folder path
+GetMT4DataPath() → Auto-detect MT4 data directory
+
+' System State Management
+SaveSystemState() → Persist system configuration
+LoadSystemState() → Restore system state on startup
+GetSystemStartTime() → System initialization timestamp
+GetLastHeartbeat() → Last system health check time
+
+' Emergency Procedures
+EmergencySystemShutdown(reason) → Critical system shutdown
+PerformSystemHealthCheck() → Calculate system health score (0-100)
+ExecuteSystemMonitoring() → Monitor critical components
+```
+
+**System State Structure**:
+```vba
+Named Ranges (System Infrastructure):
+├── SystemInitialized: Boolean - System ready status
+├── SystemStartTime: Date - Initialization timestamp
+├── TimerActive: Boolean - Timer system running status
+├── FileSystemVerified: Boolean - File access confirmed
+├── MT4ConnectionVerified: Boolean - MT4 integration confirmed
+├── LastHeartbeat: Date - Last health check timestamp
+├── SystemHealthScore: Integer - Health score (0-100)
+├── LastParameterSet: Integer - Last used parameter set (1-4)
+├── DownloadsPath: String - Downloads folder path
+├── ArchivePath: String - Archive folder path
+└── MT4DataPath: String - MT4 data directory path
+
+Health Score Calculation:
+├── Timer System (25 points): Active timer + failure count
+├── File System (25 points): Verified folder access
+├── MT4 Connection (25 points): Verified signal integration
+├── System Uptime (25 points): Continuous operation time
+└── Total Score: 0-100 (Excellent: 90+, Good: 70+, Poor: 50+, Critical: <50)
+```
+
+##### **data_store_manager.bas** - Centralized Data Management System
+**Role**: Central data repository for all dashboard and system components
+**Dependencies**: system_infrastructure.bas, FormHelpersUtilities.bas
+**Priority**: HIGH - Required for all dashboard functionality
+
+**Core Functions**:
+```vba
+' Data Store Initialization
+InitializeDataStore() → Setup centralized data repository
+CreateDataStoreSheet() → Create hidden DataStore worksheet
+SetupDataStoreStructure() → Define data storage areas
+InitializeCalendarDataArea() → Setup calendar event storage
+
+' Calendar Data Management
+UpdateCalendarData(calendarData) → Store processed calendar events
+GetCalendarData() → Retrieve calendar events for displays
+GetActiveCalendarEvents() → Get events for current timeframe
+GetNextCalendarEvent() → Get next upcoming event
+
+' System Data Management
+UpdateSystemStatus(healthScore, timerStatus, mt4Status, calendarStatus) → System health
+GetSystemStatus() → Retrieve current system status
+UpdateParameterSetState(lastUsedSet) → Track parameter set rotation
+
+' Data Change Events
+OnCalendarDataChanged() → Trigger calendar data refresh
+NotifyDashboardsOfDataChange(dataType) → Update dashboard displays
+MarkAllDataDirty() → Force refresh of all data
+IsDataDirty(dataType) → Check if data needs refresh
+```
+
+**Data Store Layout**:
+```vba
+DataStore Sheet Structure:
+├── Row 1-2: Account Data (existing integration)
+├── Row 3-102: Trades Data (existing integration) 
+├── Row 104-203: Calendar Events (NEW - up to 100 events)
+├── Row 206-207: System Status (NEW - health monitoring)
+├── Row 208-212: Parameter Sets (NEW - 4 fixed sets)
+├── Row 214-513: Performance History (existing)
+
+Calendar Data Fields (Row 104-203):
+├── Column A: Date - Event date
+├── Column B: Time - Event time in CST
+├── Column C: Title - Event name/description
+├── Column D: Country - Currency code (USD, EUR, GBP, etc.)
+├── Column E: Impact - High/Medium/Low
+├── Column F: EventType - Economic/Anticipation/Equity
+├── Column G: ParameterSet - Assigned parameter set (1-4)
+├── Column H: Enabled - User toggle (TRUE/FALSE)
+├── Column I: TriggerTime - Calculated trigger time (event time - offset)
+├── Column J: Status - PENDING/TRIGGERED/COMPLETED/BLOCKED
+└── Column K: LastUpdate - Data refresh timestamp
+
+System Status Fields (Row 206-207):
+├── SystemHealth: EXCELLENT/GOOD/POOR/CRITICAL
+├── TimerStatus: RUNNING/STOPPED/FAILED
+├── MT4Status: CONNECTED/DISCONNECTED/UNKNOWN
+├── CalendarStatus: LOADED/EMPTY/ERROR
+├── LastUpdate: Status update timestamp
+└── Uptime: Hours since system start
+```
+
+##### **error_handling_system.bas** - Comprehensive Error Management
+**Role**: Centralized error handling, logging, and user notification system
+**Dependencies**: system_infrastructure.bas
+**Priority**: CRITICAL - Foundation for all error management
+
+**Core Functions**:
+```vba
+' Error Handling Initialization
+InitializeErrorHandling() → Setup error management system
+CreateErrorLogSheet() → Create hidden error log worksheet
+InitializeLogFile() → Setup file-based error logging
+
+' Core Logging Functions
+LogInfo(functionName, message, context) → Information logging
+LogWarning(functionName, message, context) → Warning logging
+LogError(functionName, message, context) → Error logging
+LogCritical(functionName, message, context) → Critical error logging
+LogVBAError(functionName, errorNumber, description, context) → VBA error logging
+LogCategorized(severity, category, functionName, message, context) → Categorized logging
+
+' Error Recovery Functions
+AttemptRecovery(category, context) → Attempt system recovery
+RecoverTimerSystem() → Restart failed timer system
+RecoverFileSystemAccess() → Restore file access
+RecoverMT4Connection() → Restore MT4 integration
+RecoverDataProcessing() → Restore data processing
+
+' Notification System
+ShowStatusBarMessage(entry) → Status bar notifications
+ShowDashboardBanner(entry) → Dashboard banner alerts
+ShowModalAlert(entry) → Critical error popups
+HandleUserNotification(entry, notifyType) → Smart notification routing
+```
+
+**Error Handling Structure**:
+```vba
+Error Severity Levels:
+├── SEVERITY_INFO: General information
+├── SEVERITY_WARNING: Non-critical issues
+├── SEVERITY_ERROR: Operational errors
+└── SEVERITY_CRITICAL: System-threatening errors
+
+Error Categories:
+├── CAT_SYSTEM: Core system errors
+├── CAT_TIMER: Timer system errors
+├── CAT_FILE_SYSTEM: File access errors
+├── CAT_CALENDAR: Calendar processing errors
+├── CAT_SIGNAL_PROCESSING: Signal generation errors
+├── CAT_DASHBOARD: Dashboard display errors
+└── CAT_USER_ACTION: User interaction errors
+
+Error Log Entry Structure:
+├── Timestamp: Error occurrence time
+├── Severity: Error severity level
+├── Category: Error category
+├── FunctionName: Function where error occurred
+├── ErrorNumber: VBA error number (if applicable)
+├── Description: Error description
+├── Context: Additional context information
+├── UserAction: Recommended user action
+├── Resolution: How error was resolved
+└── Logged: Successfully logged flag
+```
+
+##### **dashboard_framework.bas** - Base Dashboard System
+**Role**: Framework for all dashboard sheets with common functionality
+**Dependencies**: system_infrastructure.bas, data_store_manager.bas
+**Priority**: HIGH - Required for all dashboard sheets
+
+**Core Functions**:
+```vba
+' Dashboard Framework Initialization
+InitializeDashboardFramework() → Setup dashboard system
+RegisterDashboard(sheetName, title, quadrantCount, refreshInterval) → Register dashboard
+CreateDashboardSheet(sheetName, title) → Create dashboard worksheet
+
+' Dashboard Layout Management
+SetupDashboardGrid(ws) → Setup grid layout system
+SetupDashboardHeader(ws, title) → Create dashboard header
+CreateQuadrant(ws, quadrantName, startRow, startCol, height, width, title) → Create quadrant
+ToggleQuadrantCollapse(ws, quadrantName) → Expand/collapse sections
+
+' Dashboard Display Functions
+SetStatusIndicator(ws, cellAddress, status, message) → Visual status indicators
+SetProgressBar(ws, cellRange, percentage, label) → Progress bar displays
+RefreshDashboard(sheetName) → Update dashboard data
+GetDashboardCell(ws, quadrantName, relativeRow, relativeCol) → Get quadrant cell
+
+' Dashboard Utilities
+SetupDashboardStyles(ws) → Apply consistent formatting
+AddGridReferences(ws) → Add development grid markers
+```
+
+**Dashboard Layout Structure**:
+```vba
+Dashboard Grid System:
+├── Grid Size: 40 rows × 20 columns
+├── Quadrant Size: 18 rows × 9 columns each
+├── Header Area: Rows 1-3 (title, status, controls)
+├── Content Area: Rows 4-40 (4 quadrants max)
+
+Dashboard Components:
+├── TradingDashboard: Account + Trades + System Health + Performance
+├── CalendarControl: Events + Config + Parameter Sets + Manual Controls
+├── EventManagement: Blocked Periods + Duplicates + Toggles + Logs
+├── Analytics: Signal History + Results + Performance + Statistics
+└── SystemConfig: Config + File System + MT4 + Advanced Settings
+
+Status Indicators:
+├── ● Green: Excellent status
+├── ● Yellow: Good status with minor issues
+├── ⚠ Orange: Warning status requiring attention
+├── ✗ Red: Error status requiring immediate action
+└── ○ Gray: Offline/unknown status
+```
+
+#### **PHASE 2: CALENDAR SYSTEM MODULES**
+
+##### **calendar_import_engine.bas** - Complete Calendar Import System
+**Role**: File detection, validation, import processing, CSV parsing, scheduling
+**Dependencies**: system_infrastructure.bas, data_store_manager.bas, error_handling_system.bas
+**Priority**: HIGH - Core calendar functionality
+
+**Core Functions**:
+```vba
+' Import Engine Initialization
+InitializeCalendarImportEngine() → Setup import system
+LoadImportConfiguration() → Load import settings
+LoadImportState() → Restore import state
+InitializeImportStatistics() → Setup statistics tracking
+
+' Main Import Functions
+ExecuteCalendarImport(manualTrigger) → Execute calendar import
+FindCalendarFile() → Locate calendar files in Downloads
+SelectBestCalendarFile(fileCollection) → Choose best file from multiple
+ValidateCalendarFile(filePath) → Validate file before processing
+ParseCalendarCSV(filePath) → Parse CSV into structured data
+
+' File Detection & Validation
+FindFilesByPattern(folderPath, pattern) → Search files by pattern
+IsValidCalendarFileName(fileName) → Validate filename format
+IsFileAccessible(filePath) → Test file access permissions
+ValidateFileContent(filePath) → Peek at file content structure
+
+' CSV Parsing Functions
+ParseCSVHeader(headerLine) → Map CSV columns dynamically
+ParseCSVData(csvLines, columnMapping) → Parse data rows
+SplitCSVLine(csvLine) → Handle CSV field splitting
+ParseCalendarDate(dateString) → Parse various date formats
+ParseCalendarTime(timeString) → Parse time with AM/PM support
+NormalizeImpactLevel(impactString) → Standardize impact levels
+
+' Import Scheduling
+ScheduleNextImport() → Schedule Sunday 12 PM import
+ScheduleImportRetry() → Schedule hourly retry
+ExecuteScheduledCalendarImport() → Scheduled import entry point
+GetNextSundayNoon() → Calculate next Sunday 12 PM
+
+' File Management
+ArchiveCalendarFile(filePath) → Archive processed files
+CleanupOldCalendarFiles() → Remove files older than 7 days
+
+' Import Success/Failure Handling
+HandleImportSuccess(filePath, startTime, manualTrigger) → Success processing
+HandleImportFailure(errorMessage, manualTrigger) → Failure processing
+SaveImportState() → Persist import state
+```
+
+**Import Configuration Structure**:
+```vba
+Import Configuration:
+├── IMPORT_DAY: 1 (Sunday)
+├── IMPORT_HOUR: 12 (12 PM CST)
+├── RETRY_INTERVAL_HOURS: 1 (hourly retries)
+├── MAX_RETRY_ATTEMPTS: 24 (24 hour retry window)
+├── IMPORT_TIMEOUT_SECONDS: 30 (operation timeout)
+
+File Search Patterns (Priority Order):
+├── "ff_calendar*.csv" (ForexFactory - highest priority)
+├── "*calendar*thisweek*.csv" (This week calendars)
+├── "*economic*calendar*.csv" (Economic calendar files)
+├── "*calendar*.csv" (General calendar files)
+└── "*forex*.csv" (Forex calendar files)
+
+Import Statistics:
+├── TotalAttempts: Count of all import attempts
+├── SuccessfulImports: Count of successful imports
+├── FailedImports: Count of failed imports
+├── FilesProcessed: Count of files processed
+├── AverageImportTime: Average processing time
+├── LastError: Last error message
+├── ImportRetryCount: Current retry count
+└── LastImportedFile: Path of last imported file
+
+CSV Column Mapping:
+├── Title: "title", "event", "name", "description"
+├── Country: "country", "currency", "cur", "symbol"
+├── Date: "date", "day", "time_date"
+├── Time: "time", "hour", "minute"
+├── Impact: "impact", "importance", "volatility"
+├── Forecast: "forecast", "expected", "consensus"
+├── Previous: "previous", "prior", "last"
+└── URL: "url", "link", "source"
+```
+
+##### **calendar_data_processor.bas** - Calendar Data Transformation & Validation Pipeline
+**Role**: Transform raw CSV data into clean, validated, standardized calendar events
+**Dependencies**: system_infrastructure.bas, data_store_manager.bas, error_handling_system.bas
+**Priority**: HIGH - Core data processing functionality
+
+**Core Functions**:
+```vba
+' Data Processor Initialization
+InitializeCalendarDataProcessor() → Setup data processing system
+LoadProcessingConfiguration() → Load processing settings
+InitializeValidationRules() → Setup validation rules
+InitializeProcessingStatistics() → Setup processing metrics
+
+' Main Processing Functions
+ProcessCalendarData(rawCalendarData, sourceFile) → Main processing pipeline
+TransformRawData(rawData) → Convert raw data to structured events
+ValidateAndFilterEvents(structuredEvents) → Validate and filter events
+ApplyFinalProcessing(validatedEvents) → Final processing steps
+
+' Data Transformation Functions
+TransformSingleEvent(rawData, eventIndex) → Transform individual event
+CleanEventTitle(rawTitle) → Clean and standardize event titles
+StandardizeCountryCode(rawCountry) → Convert country to currency code
+ConvertToCST(eventDate, eventTime) → Convert to Central Standard Time
+MapImpactToCode(impactLevel) → Convert impact to system codes
+DetermineEventType(eventData) → Categorize event type
+
+' Time Zone Conversion Functions
+IsDateInDST(checkDate) → Check if date is in Daylight Saving Time
+GetNthSundayOfMonth(targetYear, targetMonth, nthWeek) → Calculate DST dates
+
+' Event Validation Functions
+ValidateSingleEvent(events, eventIndex) → Validate individual event
+ApplyEventFiltering(validatedEvents) → Apply additional filters
+RemoveBasicDuplicates(events) → Remove duplicate events
+SortEventsByQuality(events) → Sort by quality score
+
+' Quality Scoring Functions
+CalculateEventQualityScore(eventData) → Calculate data quality score (0-100)
+
+' Final Processing Functions
+SortEventsChronologically(events) → Sort events by date/time
+AddProcessingMetadata(events) → Add processing session info
+CalculateFinalStatistics() → Calculate processing statistics
+```
+
+**Data Processing Structure**:
+```vba
+Processing Configuration:
+├── PROCESSING_TIMEOUT_SECONDS: 60 (max processing time)
+├── MAX_EVENTS_PER_IMPORT: 200 (maximum events per import)
+├── MIN_EVENT_TITLE_LENGTH: 3 (minimum title length)
+├── MAX_EVENT_TITLE_LENGTH: 100 (maximum title length)
+├── PAST_EVENT_TOLERANCE: 1 (days to include past events)
+├── FUTURE_EVENT_RANGE: 14 (days to include future events)
+├── MIN_DATA_QUALITY_SCORE: 60 (minimum quality score)
+
+Time Zone Constants:
+├── BASE_TIMEZONE: "CST" (Central Standard Time)
+├── DST_START_MONTH: 3 (March)
+├── DST_START_WEEK: 2 (Second Sunday)
+├── DST_END_MONTH: 11 (November)
+├── DST_END_WEEK: 1 (First Sunday)
+
+Validation Configuration:
+├── RequireTitle: TRUE (title required)
+├── RequireCountry: TRUE (country required)
+├── RequireDate: TRUE (date required)
+├── RequireTime: TRUE (time required)
+├── RequireImpact: TRUE (impact required)
+├── AllowFutureDates: TRUE (future events allowed)
+├── AllowPastDates: TRUE (past events allowed)
+├── FilterByImpact: TRUE (filter by impact level)
+└── FilterByDateRange: TRUE (filter by date range)
+
+Event Structure (13 columns):
+├── Column 0: Title (cleaned and standardized)
+├── Column 1: Country (3-letter currency code)
+├── Column 2: Date (parsed date object)
+├── Column 3: Time (parsed time object)
+├── Column 4: Impact (High/Medium/Low)
+├── Column 5: Forecast (expected value)
+├── Column 6: Previous (previous reading)
+├── Column 7: URL (source link)
+├── Column 8: DateTime (combined CST timestamp)
+├── Column 9: ImpactCode (EMO-E/EMO-A/EMO-L)
+├── Column 10: QualityScore (0-100 data quality)
+├── Column 11: EventType (event category)
+└── Column 12: ProcessingNotes (validation messages)
+
+Impact Code Mapping:
+├── "HIGH" → "EMO-E" (Economic Major - Extreme)
+├── "MEDIUM" → "EMO-A" (Economic Major - Average)
+├── "LOW" → "EMO-L" (Economic Major - Low)
+└── "HOLIDAY" → "HOL" (Holiday)
+
+Quality Scoring:
+├── Required Fields (20 points each): Title, Country, Date, Time, Impact
+├── Optional Fields (5 points each): Forecast, Previous, URL
+├── Title Quality Bonus (5 points): Descriptive titles (>20 characters)
+├── Impact Level Bonus: High (10 points), Medium (5 points)
+└── Total Possible Score: 100 points
+```
+
+##### **parameter_set_manager.bas** - 4-Parameter Set Management
+**Role**: Manage 4 fixed parameter sets with lot size variations
+**Dependencies**: system_infrastructure.bas, data_store_manager.bas
+**Priority**: MEDIUM - Signal generation parameter management
+
+**Core Functions**:
+```vba
+' Parameter Set Initialization
+InitializeParameterSets() → Setup 4 fixed parameter sets
+LoadParameterSetConfiguration() → Load parameter configuration
+SaveParameterSetConfiguration() → Save parameter settings
+
+' Parameter Set Management
+GetParameterSet(setID) → Retrieve specific parameter set
+GetNextParameterSetID() → Get next parameter set in rotation
+SelectParameterSetForEvent(eventData) → Choose parameter set for event
+UpdateParameterSetUsage(setID) → Track parameter set usage
+
+' Parameter Set Configuration
+ConfigureParameterSet(setID, parameters) → Configure specific set
+ValidateParameterSet(parameters) → Validate parameter values
+ResetParameterSetsToDefaults() → Reset all sets to defaults
+
+' Selection Logic Functions
+SelectParameterSetSequential() → Sequential rotation (1,2,3,4,1,2...)
+SelectParameterSetRandom() → Random selection (1-4)
+SelectParameterSetImpactBased(eventData) → Selection based on event impact
+GetLastUsedParameterSet() → Get last used parameter set
+SetLastUsedParameterSet(setID) → Update last used parameter set
+```
+
+**Parameter Set Structure**:
+```vba
+Fixed Parameter Sets (Only lot size differs):
+SET_1 (Micro): {
+    lot_size: 0.01,          // Micro lot
+    stop_loss: 20,           // pips
+    take_profit: 40,         // pips
+    buy_distance: 10,        // pips
+    sell_distance: 10,       // pips
+    expire_hours: 24,        // hours
+    trailing_stop: 0,        // disabled
+    max_spread: 3            // pips
+}
+
+SET_2 (Small): {
+    lot_size: 0.02,          // All other parameters identical
+    stop_loss: 20,
+    take_profit: 40,
+    buy_distance: 10,
+    sell_distance: 10,
+    expire_hours: 24,
+    trailing_stop: 0,
+    max_spread: 3
+}
+
+SET_3 (Medium): {
+    lot_size: 0.03,          // All other parameters identical
+    stop_loss: 20,
+    take_profit: 40,
+    buy_distance: 10,
+    sell_distance: 10,
+    expire_hours: 24,
+    trailing_stop: 0,
+    max_spread: 3
+}
+
+SET_4 (Large): {
+    lot_size: 0.04,          // All other parameters identical
+    stop_loss: 20,
+    take_profit: 40,
+    buy_distance: 10,
+    sell_distance: 10,
+    expire_hours: 24,
+    trailing_stop: 0,
+    max_spread: 3
+}
+
+Selection Methods:
+├── SEQUENTIAL: Rotate through sets 1→2→3→4→1...
+├── RANDOM: Random selection from sets 1-4
+├── IMPACT_BASED: High impact = Set 4, Medium = Set 3, Other = Set 1
+└── USER_DEFINED: Manual selection method
+
+Parameter Set State:
+├── LastUsedParameterSet: Integer (1-4)
+├── ParameterSetMethod: String (SEQUENTIAL/RANDOM/IMPACT_BASED)
+├── TotalUsageCount: Array of usage counts per set
+├── LastSelectionTime: Timestamp of last selection
+└── SelectionStatistics: Usage statistics per set
+```
+
+##### **event_trigger_engine.bas** - Real-time Event Monitoring
+**Role**: Real-time event monitoring and signal triggering
+**Dependencies**: system_infrastructure.bas, data_store_manager.bas, parameter_set_manager.bas
+**Priority**: HIGH - Core triggering functionality
+
+**Core Functions**:
+```vba
+' Trigger Engine Initialization
+InitializeEventTriggerEngine() → Setup real-time monitoring
+LoadTriggerConfiguration() → Load trigger settings
+StartEventMonitoring() → Begin event monitoring
+StopEventMonitoring() → Stop event monitoring
+
+' Event Monitoring Functions
+MonitorActiveEvents() → Check for triggered events
+CheckEventTrigger(event) → Check if event should trigger
+CalculateTriggerTime(event) → Calculate event trigger time
+IsEventReadyToTrigger(event) → Check if event is ready
+GetNextUpcomingEvent() → Get next event to trigger
+
+' Signal Triggering Functions
+TriggerEventSignal(event) → Trigger signal for event
+ProcessEventTrigger(event) → Process triggered event
+GenerateSignalFromEvent(event, parameterSet) → Create signal from event
+SendSignalToSignalEntry(signalData) → Send to existing signal system
+
+' Trigger Configuration
+SetTriggerOffset(eventType, offsetMinutes) → Configure trigger offsets
+GetTriggerOffset(eventType) → Get offset for event type
+ValidateTriggerConfiguration() → Validate trigger settings
+
+' Event Status Management
+UpdateEventStatus(event, status) → Update event status
+GetActiveEvents() → Get events ready for monitoring
+GetTriggeredEvents() → Get recently triggered events
+GetCompletedEvents() → Get completed events
+```
+
+**Trigger Engine Structure**:
+```vba
+Trigger Offsets (Minutes before event):
+├── EMO-E (High Impact): -3 minutes
+├── EMO-A (Medium Impact): -2 minutes
+├── EQT-OPEN (Equity Markets): -5 minutes
+├── ANTICIPATION: -1 minute
+└── USER_DEFINED: Configurable offset
+
+Event Statuses:
+├── PENDING: Event loaded, waiting for trigger time
+├── READY: Event within trigger window
+├── TRIGGERED: Signal generated for event
+├── COMPLETED: Event processed and finished
+├── BLOCKED: Event blocked by user or system
+├── FAILED: Event trigger failed
+└── EXPIRED: Event trigger window passed
+
+Monitoring Configuration:
+├── MONITOR_INTERVAL_SECONDS: 15 (monitoring frequency)
+├── TRIGGER_PRECISION_SECONDS: 30 (trigger timing precision)
+├── MAX_TRIGGER_ATTEMPTS: 3 (retry failed triggers)
+├── TRIGGER_WINDOW_MINUTES: 5 (window to attempt trigger)
+
+Active Event Queue:
+├── EventID: Unique event identifier
+├── EventTitle: Event name
+├── TriggerTime: Calculated trigger time
+├── ParameterSet: Assigned parameter set (1-4)
+├── Status: Current event status
+├── LastCheck: Last monitoring check time
+├── AttemptCount: Number of trigger attempts
+└── Notes: Processing notes and messages
+```
+
+##### **anticipation_generator.bas** - Anticipation Event Generation
+**Role**: Generate anticipation events from original events
+**Dependencies**: system_infrastructure.bas, data_store_manager.bas
+**Priority**: MEDIUM - Event enhancement functionality
+
+**Core Functions**:
+```vba
+' Anticipation Generator Initialization
+InitializeAnticipationGenerator() → Setup anticipation system
+LoadAnticipationConfiguration() → Load anticipation settings
+SaveAnticipationConfiguration() → Save anticipation settings
+
+' Anticipation Event Generation
+GenerateAnticipationEvents(originalEvents) → Generate anticipation events
+CreateAnticipationEvent(originalEvent, hoursOffset) → Create single anticipation
+GenerateAnticipationForEvent(event, anticipationHours) → Generate for specific event
+ValidateAnticipationEvents(anticipationEvents, originalEvents) → Validate generated events
+
+' Anticipation Configuration
+SetAnticipationHours(hoursArray) → Configure anticipation hours
+GetAnticipationHours() → Get current anticipation hours
+SetMaxAnticipationCount(maxCount) → Set maximum anticipation events
+UpdateAnticipationConfiguration() → Apply configuration changes
+
+' Anticipation Event Formatting
+FormatAnticipationTitle(hoursOffset, originalEvent) → Create anticipation title
+CalculateAnticipationTime(originalTime, hoursOffset) → Calculate anticipation time
+AssignAnticipationParameters(anticipationEvent) → Assign parameter set
+
+' Conflict Detection
+CheckAnticipationConflicts(anticipationEvents, originalEvents) → Check for conflicts
+ResolveAnticipationConflicts(conflicts) → Resolve timing conflicts
+EnsureMinimumGap(events) → Ensure minimum time gaps between events
+```
+
+**Anticipation Configuration Structure**:
+```vba
+Anticipation Settings:
+├── AnticipationHours: [1, 2, 4] (hours before original event)
+├── MaxAnticipationCount: 3 (maximum anticipation events per original)
+├── AnticipationEnabled: TRUE (enable/disable anticipation)
+├── MinimumGapMinutes: 30 (minimum gap between events)
+├── ConflictResolution: AUTO (AUTO/MANUAL conflict resolution)
+
+Anticipation Event Format:
+├── Title: "#{Hours}H Before {OriginalEvent} Anticipation - {Currency} - {Impact}"
+├── Example: "#2H Before NFP Anticipation - USD - High"
+├── EventType: "ANTICIPATION"
+├── Impact: Inherits from original event
+├── ParameterSet: Based on anticipation configuration
+
+Anticipation Event Structure:
+├── OriginalEventID: Reference to source event
+├── HoursOffset: Hours before original event
+├── AnticipationTime: Calculated anticipation trigger time
+├── InheritedImpact: Impact level from original event
+├── ConflictStatus: NO_CONFLICT/RESOLVED/MANUAL_REVIEW
+└── GenerationTime: When anticipation was generated
+
+Conflict Detection Rules:
+├── Minimum Gap: 30 minutes between any two events
+├── Overlap Detection: Check for time conflicts
+├── Priority Rules: Original events take priority over anticipation
+├── Resolution: Adjust anticipation times to avoid conflicts
+└── Manual Review: Flag complex conflicts for user review
+```
+
+##### **calendar_validation.bas** - Data Validation & Quality Control
+**Role**: Comprehensive data validation and quality control
+**Dependencies**: system_infrastructure.bas, error_handling_system.bas
+**Priority**: MEDIUM - Data quality assurance
+
+**Core Functions**:
+```vba
+' Validation System Initialization
+InitializeCalendarValidation() → Setup validation system
+LoadValidationConfiguration() → Load validation rules
+SetValidationRules(rules) → Configure validation parameters
+
+' Event Validation Functions
+ValidateCalendarEvent(eventData) → Validate single event
+ValidateEventBatch(eventsArray) → Validate multiple events
+ValidateRequiredFields(event) → Check required field presence
+ValidateFieldFormats(event) → Check field format validity
+ValidateBusinessRules(event) → Check business logic rules
+
+' Field-Specific Validation
+ValidateEventTitle(title) → Validate event title
+ValidateEventDate(date) → Validate event date
+ValidateEventTime(time) → Validate event time
+ValidateEventImpact(impact) → Validate impact level
+ValidateCountryCode(country) → Validate currency code
+
+' Validation Reporting
+GenerateValidationReport(validationResults) → Create validation report
+GetValidationStatistics() → Get validation statistics
+LogValidationError(event, error) → Log validation errors
+ExportValidationReport() → Export validation results
+```
+
+#### **PHASE 3: DASHBOARD INTEGRATION MODULES**
+
+##### **calendar_control_dashboard.bas** - Calendar Control Dashboard
+**Role**: Main calendar control interface dashboard
+**Dependencies**: dashboard_framework.bas, data_store_manager.bas
+**Priority**: HIGH - User interface
+
+**Core Functions**:
+```vba
+' Dashboard Setup
+SetupCalendarControlDashboard() → Create calendar control dashboard
+InitializeCalendarDashboard() → Setup dashboard layout
+RefreshCalendarDashboard() → Update dashboard data
+
+' Dashboard Sections
+SetupNextEventsSection(ws) → Next events display (EventTriggers data)
+SetupCalendarConfigSection(ws) → Configuration interface
+SetupParameterSetsSection(ws) → Parameter set management
+SetupManualControlsSection(ws) → Manual control buttons
+
+' Event Display Functions
+DisplayUpcomingEvents(ws, events) → Show next events with countdown
+UpdateEventCountdowns(ws) → Update countdown timers
+ShowEventStatus(ws, event, status) → Display event status
+UpdateParameterSetDisplay(ws) → Show current parameter sets
+
+' User Controls
+HandleCalendarControlClicks(target) → Process button clicks
+ToggleEventEnabled(eventID) → Enable/disable specific event
+UpdateAnticipationSettings() → Apply anticipation changes
+RefreshCalendarData() → Manual calendar refresh
+```
+
+**Calendar Control Dashboard Layout**:
+```vba
+Dashboard Layout (4 Quadrants):
+┌─ Next Events (Q1) ────────────┬─ Calendar Config (Q2) ────────┐
+│ 15:30 NFP (in 45 min) - Set 3│ Anticipation: [2,4] hours     │
+│ 16:00 Fed Speech (1h15m) - S1│ Offsets: High=-3, Med=-2      │
+│ 02:00 London Open (tomorrow) │ [Update Calendar] [Test]       │
+│ [Toggle All] [Emergency Stop]│ Import: Sunday 12 PM          │
+├─ Today's Events (Q3) ─────────┼─ Parameter Sets (Q4) ─────────┤
+│ ✓ 08:30 ADP Employment (done) │ Set 1: 0.01 lots [Edit]      │
+│ ○ 15:30 NFP (pending)         │ Set 2: 0.02 lots [Edit]      │
+│ ○ 16:00 Fed Speech (pending)  │ Set 3: 0.03 lots [Edit]      │
+│ Manual: [Import] [Clear]      │ Set 4: 0.04 lots [Edit]      │
+│ Status: [✓] Auto-Triggers     │ Selection: Sequential         │
+│ [✓] Process Anticipation      │ Last Used: Set 2             │
+│ [✗] Emergency Block All       │ [Reset Rotation]             │
+└───────────────────────────────┴───────────────────────────────┘
+
+Dashboard Elements:
+├── Event Countdown Timers: Real-time countdown to next events
+├── Event Status Indicators: ✓ Completed, ○ Pending, ● Active, ✗ Blocked
+├── Parameter Set Display: Current configuration and last used
+├── Manual Control Buttons: Import, refresh, toggle, emergency stop
+├── Configuration Interface: Anticipation hours, offsets, import schedule
+└── Status Monitoring: System health, timer status, connection status
+```
+
+### 🔴 CSV FILE STRUCTURES & DATA FLOWS
+
+#### **Calendar Import Files (Downloads Folder)**
+
+##### **Primary Calendar CSV Format (ForexFactory)**:
+```csv
+File: ff_calendar_thisweek.csv
+Location: %USERPROFILE%\Downloads\
+
+Headers: Title,Country,Date,Time,Impact,Forecast,Previous,URL
+
+Sample Data:
+Non-Farm Employment Change,USD,12-05-2024,14:30,High,180K,150K,https://...
+Federal Reserve Chair Powell Speaks,USD,12-05-2024,16:00,High,,,https://...
+ADP Non-Farm Employment Change,USD,12-04-2024,14:15,Medium,150K,143K,https://...
+Consumer Price Index m/m,EUR,12-06-2024,11:00,High,0.3%,0.2%,https://...
+```
+
+##### **Secondary Calendar CSV Format (Generic)**:
+```csv
+File: economic_calendar_2024.csv
+Location: %USERPROFILE%\Downloads\
+
+Headers: Event,Currency,Date,Time,Importance,Expected,Previous,Link
+
+Sample Data:
+NFP,USD,2024-12-05,2:30 PM,High,180K,150K,
+ECB Rate Decision,EUR,2024-12-06,8:45 AM,High,4.50%,4.50%,
+PMI Manufacturing,GBP,2024-12-04,9:30 AM,Medium,52.1,51.8,
+```
+
+#### **Processed Calendar Data (DataStore)**
+
+##### **Internal Calendar Data Structure**:
+```vba
+Processed Event Structure (13 fields):
+├── [0] Title: "Non-Farm Employment Change"
+├── [1] Country: "USD" (standardized currency code)
+├── [2] Date: 12/05/2024 (Excel date object)
+├── [3] Time: 2:30 PM (Excel time object)
+├── [4] Impact: "High" (standardized impact level)
+├── [5] Forecast: "180K" (expected value)
+├── [6] Previous: "150K" (previous reading)
+├── [7] URL: "https://..." (source link)
+├── [8] DateTime: 12/05/2024 2:30 PM CST (combined timestamp)
+├── [9] ImpactCode: "EMO-E" (system impact code)
+├── [10] QualityScore: 95 (data quality score 0-100)
+├── [11] EventType: "EMPLOYMENT" (event category)
+└── [12] ProcessingNotes: "Validation passed"
+
+Enhanced Event Structure (with anticipation):
+├── Original Event: Non-Farm Employment Change at 14:30
+├── Anticipation 1: "#1H Before NFP Anticipation - USD - High" at 13:30
+├── Anticipation 2: "#2H Before NFP Anticipation - USD - High" at 12:30
+└── Anticipation 3: "#4H Before NFP Anticipation - USD - High" at 10:30
+```
+
+#### **Signal Generation Integration**
+
+##### **Calendar-to-Signal Data Flow**:
+```vba
+Calendar Event Trigger → Parameter Set Selection → Signal Generation
+
+Event Data:
+├── EventTitle: "Non-Farm Employment Change"
+├── TriggerTime: 14:27 (3 minutes before 14:30 event)
+├── Impact: "EMO-E" (High impact)
+├── ParameterSet: 3 (selected by rotation/logic)
+
+Generated Signal Data:
+├── Symbol: "EURUSD" (primary affected pair for USD events)
+├── BuyDistance: 10 pips (from parameter set 3)
+├── SellDistance: 10 pips (from parameter set 3)
+├── StopLoss: 20 pips (from parameter set 3)
+├── TakeProfit: 40 pips (from parameter set 3)
+├── LotSize: 0.03 (from parameter set 3)
+├── ExpireHours: 24 (from parameter set 3)
+├── TrailingStop: 0 (from parameter set 3)
+├── Comment: "Calendar: NFP" (calendar event identifier)
+├── StrategyID: 301 (calendar-based strategy)
+├── PSetID: 3 (parameter set used)
+└── Timestamp: 2024-12-05 14:27:00 (trigger time)
+```
+
+#### **Integration with Existing Signal System**
+
+##### **Signal Integration Points**:
+```vba
+Calendar System → Existing SignalEntrySheet.bas Integration:
+
+1. Calendar Event Detection (event_trigger_engine.bas)
+   ↓ TriggerEventSignal(event)
+
+2. Parameter Set Selection (parameter_set_manager.bas)
+   ↓ GetParameterSet(setID)
+
+3. Signal Data Creation
+   ↓ GenerateSignalFromEvent(event, parameterSet)
+
+4. Signal Entry Integration (SignalEntrySheet.bas)
+   ↓ ProcessCalendarSignal(signalData)
+
+5. Existing Signal Validation
+   ↓ ValidateSignalRow(ws, row, errorMsg)
+
+6. Existing Signal Export
+   ↓ ExportValidSignalsToCSV(signalsToExport)
+
+7. Existing MT4 Integration
+   ↓ python-watchdog.py → MT4 signal processing
+```
+
+---
+
+## SYSTEM INTEGRATION & COMMUNICATION PROTOCOLS
+
+### **Calendar System Named Ranges**:
+```vba
+Calendar Import Configuration:
+├── CalendarAutoImport: TRUE/FALSE (auto import enabled)
+├── CalendarImportPath: Downloads folder path
+├── CalendarLastImport: Last import timestamp
+├── CalendarNextImport: Next scheduled import time
+├── CalendarImportStatus: SUCCESS/FAILED/PENDING
+├── CalendarRetryCount: Current retry attempt count
+├── CalendarLastFile: Last imported file path
+
+Calendar Processing Configuration:
+├── AnticipationHours: [1,2,4] (anticipation hours array)
+├── AnticipationCount: 3 (max anticipation events)
+├── AnticipationEnabled: TRUE/FALSE
+├── TriggerOffsets: Offset configuration object
+├── ParameterSetMethod: SEQUENTIAL/RANDOM/IMPACT_BASED
+├── LastUsedParameterSet: 1-4 (last used parameter set)
+
+Calendar Data Status:
+├── ActiveCalendarEvents: Count of active events
+├── NextEventTime: Next upcoming event time
+├── CalendarValidationErrors: Count of validation errors
+├── DuplicateResolutionLog: Duplicate processing log
+├── EventToggleStates: User event toggles
+├── ProcessingSessionID: Current processing session
+├── CalendarDataVersion: Data version for change detection
+
+System Health Monitoring:
+├── SystemHealthScore: 0-100 system health score
+├── TimerStatus: RUNNING/STOPPED/FAILED
+├── CalendarSystemStatus: ACTIVE/STOPPED/ERROR
+├── LastSystemHeartbeat: Last health check time
+├── ImportEngineStatus: READY/BUSY/ERROR
+├── TriggerEngineStatus: MONITORING/STOPPED/ERROR
+```
+
+### **Dashboard Refresh Integration**:
+```vba
+Calendar Dashboard Auto-Refresh:
+├── Global Refresh Timer: 15-second intervals (synced with event monitoring)
+├── Calendar Control Dashboard: Real-time countdown updates
+├── Event Management Dashboard: Event status updates
+├── Analytics Dashboard: Processing statistics updates
+├── System Config Dashboard: Health status updates
+
+Refresh Triggers:
+├── Timer-based: 15-second intervals for active monitoring
+├── Event-based: Data change notifications from DataStore
+├── User-triggered: Manual refresh buttons
+├── Import-triggered: New calendar data imported
+├── Configuration-triggered: Settings changed
+
+Data Change Events:
+├── OnCalendarDataChanged() → Refresh calendar displays
+├── OnEventTriggered() → Update event status displays
+├── OnParameterSetChanged() → Update parameter displays
+├── OnSystemHealthChanged() → Update health indicators
+└── OnImportCompleted() → Refresh import status displays
+```
+
+### **Error Recovery & Graceful Degradation**:
+```vba
+Calendar System Error Recovery:
+├── Import Failure: Continue with last good calendar, retry hourly
+├── Timer Failure: Restart timer system, log failure, notify user
+├── File Access Failure: Try alternate paths, request permissions
+├── MT4 Connection Failure: Queue signals, show warning, continue monitoring
+├── Data Corruption: Revert to backup, re-import from source
+├── Parameter Set Error: Use default parameter set, log error
+
+Graceful Degradation Levels:
+├── Level 1: Continue with cached data, show warnings
+├── Level 2: Disable specific features, maintain core functionality
+├── Level 3: Switch to manual mode, disable automation
+├── Level 4: Emergency stop, require user intervention
+
+Recovery Procedures:
+├── Automatic: Self-healing for common issues
+├── Semi-automatic: User confirmation for major changes
+├── Manual: User intervention required for critical issues
+├── Emergency: Complete system shutdown for safety
+```
+
+---
+
+## DEVELOPMENT PATTERNS & IMPLEMENTATION STANDARDS
+
+### **Calendar Module Standard Pattern**:
+```vba
+' ========================================
+' [module_name].bas - [Purpose Description]
+' Role: [Detailed role in calendar system]
+' Dependencies: [Required modules]
+' Priority: [CRITICAL/HIGH/MEDIUM/LOW]
+' ========================================
+
+Option Explicit
+
+' Module Constants
+Public Const [MODULE]_TIMEOUT_SECONDS As Integer = 30
+Public Const [MODULE]_MAX_ITEMS As Integer = 100
+
+' Module State Variables
+Private g_[Module]Initialized As Boolean
+Private g_[Module]Configuration As [ConfigType]
+Private g_Last[Module]Update As Date
+
+' Module Statistics
+Private Type [Module]Statistics
+    Total[Items] As Long
+    Successful[Operations] As Long
+    Failed[Operations] As Long
+    Average[Metric] As Double
+    LastError As String
+End Type
+
+Private g_[Module]Stats As [Module]Statistics
+
+' ========================================
+' [MODULE] INITIALIZATION
+' ========================================
+
+Public Function Initialize[Module]() As Boolean
+    On Error GoTo ErrorHandler
+    
+    ' Verify prerequisites
+    If Not IsSystemInitialized() Then
+        LogCategorized SEVERITY_ERROR, CAT_CALENDAR, "Initialize[Module]", "System not initialized"
+        Exit Function
+    End If
+    
+    ' Initialize module configuration
+    Call Load[Module]Configuration()
+    
+    ' Setup module state
+    Call Initialize[Module]State()
+    
+    g_[Module]Initialized = True
+    
+    LogCategorized SEVERITY_INFO, CAT_CALENDAR, "Initialize[Module]", "[Module] initialized successfully"
+    Initialize[Module] = True
+    
+    Exit Function
+    
+ErrorHandler:
+    LogVBAError "Initialize[Module]", Err.Number, Err.Description
+    Initialize[Module] = False
+End Function
+
+' ========================================
+' [MODULE] CORE FUNCTIONS
+' ========================================
+
+[Additional module-specific functions following same pattern]
+```
+
+### **Calendar Event Processing Pattern**:
+```vba
+Function Process[Event]([parameters]) As Boolean
+    On Error GoTo ErrorHandler
+    
+    Dim startTime As Date
+    startTime = Now
+    
+    ' Update statistics
+    g_[Module]Stats.Total[Operations] = g_[Module]Stats.Total[Operations] + 1
+    
+    ' Log operation start
+    LogCategorized SEVERITY_INFO, CAT_CALENDAR, "Process[Event]", "[Event] processing started"
+    
+    ' Main processing logic
+    [Processing steps with validation]
+    
+    ' Success handling
+    g_[Module]Stats.Successful[Operations] = g_[Module]Stats.Successful[Operations] + 1
+    
+    ' Update timing statistics
+    Dim processingTime As Double
+    processingTime = (Now - startTime) * 24 * 60 * 60
+    g_[Module]Stats.Average[Metric] = ((g_[Module]Stats.Average[Metric] * (g_[Module]Stats.Successful[Operations] - 1)) + processingTime) / g_[Module]Stats.Successful[Operations]
+    
+    LogCategorized SEVERITY_INFO, CAT_CALENDAR, "Process[Event]", "[Event] processing completed successfully"
+    Process[Event] = True
+    
+    Exit Function
+    
+ErrorHandler:
+    g_[Module]Stats.Failed[Operations] = g_[Module]Stats.Failed[Operations] + 1
+    g_[Module]Stats.LastError = Err.Description
+    
+    LogVBAError "Process[Event]", Err.Number, Err.Description
+    Process[Event] = False
+End Function
+```
+
+### **Calendar Dashboard Integration Pattern**:
+```vba
+Sub Refresh[Dashboard]Section(ws As Worksheet, sectionName As String)
+    On Error GoTo ErrorHandler
+    
+    ' Get section data from DataStore
+    Dim sectionData As Variant
+    sectionData = Get[Section]Data()
+    
+    If IsEmpty(sectionData) Then
+        ' Handle empty data gracefully
+        Call Display[Section]EmptyState(ws, sectionName)
+        Exit Sub
+    End If
+    
+    ' Update section display
+    Call Update[Section]Display(ws, sectionData)
+    
+    ' Update section timestamp
+    Call UpdateSectionTimestamp(ws, sectionName)
+    
+    LogCategorized SEVERITY_INFO, CAT_DASHBOARD, "Refresh[Dashboard]Section", sectionName & " section refreshed"
+    
+    Exit Sub
+    
+ErrorHandler:
+    LogVBAError "Refresh[Dashboard]Section", Err.Number, Err.Description
+    Call Display[Section]ErrorState(ws, sectionName, Err.Description)
+End Sub
+```
+
+---
+
+## CALENDAR SYSTEM OPERATIONAL PROCEDURES
+
+### **Daily Operations**:
+```vba
+Calendar System Daily Cycle:
+├── 12:00 PM Sunday: Automatic calendar import attempt
+├── 12:00 PM - 11:59 PM Sunday: Hourly retry attempts (if import failed)
+├── Real-time: 15-second event monitoring for trigger detection
+├── Real-time: Dashboard updates every 15 seconds
+├── On-demand: Manual import/refresh capabilities
+├── On-demand: User configuration changes
+├── Continuous: Error monitoring and recovery
+└── Continuous: System health monitoring
+
+Manual Procedures:
+├── Import Calendar: Click [Manual Import] button
+├── Refresh Display: Click [Refresh] buttons on dashboards
+├── Toggle Events: Click individual event toggles
+├── Emergency Stop: Click [Emergency Stop] for immediate halt
+├── Configuration: Modify settings in CalendarConfig dashboard
+└── Diagnostics: View ErrorLog sheet for troubleshooting
+```
+
+### **Maintenance Procedures**:
+```vba
+Weekly Maintenance:
+├── Archive old calendar files (automatic)
+├── Clean up error logs older than 30 days
+├── Verify system health scores
+├── Check import success rates
+└── Review blocked signal statistics
+
+Monthly Maintenance:
+├── Review parameter set performance
+├── Update anticipation hour configuration if needed
+├── Analyze calendar event accuracy
+├── Update economic event patterns
+└── System performance optimization
+
+Configuration Backup:
+├── Export configuration settings regularly
+├── Save named ranges to backup file
+├── Document custom modifications
+├── Test recovery procedures
+└── Maintain system documentation
+```
+
+---
+
+This ultra-detailed documentation provides complete technical specifications for the Economic Calendar to Signal System, covering every module, function, data structure, integration point, and operational procedure necessary for comprehensive system understanding, development, and maintenance. The system seamlessly integrates with the existing MT4-Excel infrastructure while adding sophisticated calendar-based signal generation capabilities.
+
+## System Architecture Overview - Complete Calendar Processing Architecture
+
+The Economic Calendar to Signal System is a sophisticated automated calendar processing system enabling real-time economic event monitoring, intelligent anticipation event generation, and automated trading signal triggering based on economic calendar data for seamless integration with MT4-Excel trading systems.
+
+### Calendar to Signal Data Flow Architecture
+```
+Calendar Data Sources (CSV Files)
+    ↓ Automated Import (Sunday 12 PM + Retries)
+Calendar Import Engine (File Detection & Validation)
+    ↓ CSV Parsing & Data Transformation
+Calendar Data Processor (Standardization & Enhancement)
+    ↓ Event Processing & Anticipation Generation
+Event Enhancement Engine (Anticipation + Equity Markets)
+    ↓ Real-time Event Monitoring
+Event Trigger Engine (Timer-based Monitoring)
+    ↓ Parameter Set Selection & Signal Generation
+Signal Integration Layer (MT4 Signal Generation)
+    ↓ Signal Export & Execution
+Trading System Integration (Existing MT4-Excel System)
+```
+
+### **Calendar Processing Communication Model**:
+
+#### **Calendar Import Channel**:
+```
+Downloads Folder Monitoring
+    ↓ Priority-based file detection (ff_calendar*.csv, *thisweek*.csv)
+Calendar Import Engine
+    ↓ CSV validation and parsing
+Data Store Integration
+    ↓ Centralized calendar data storage
+Dashboard Integration
+```
+- **Data**: Economic events, dates, times, impact levels
+- **Frequency**: Sunday 12 PM CST + hourly retries for 24 hours
+- **Implementation**: File system monitoring + CSV processing
+- **Validation**: Comprehensive field validation + duplicate detection
+
+#### **Event Processing Channel**:
+```
+Raw Calendar Data
+    ↓ Time zone conversion (CST standardization)
+Data Transformation Pipeline
+    ↓ Impact filtering (High/Medium only)
+Event Enhancement Engine
+    ↓ Anticipation event generation + equity market injection
+Real-time Event Queue
+    ↓ Chronological sorting and conflict resolution
+```
+- **Data**: Processed events with anticipation events and market opens
+- **Processing**: Real-time transformation and enhancement
+- **Implementation**: Multi-stage processing pipeline
+- **Quality Control**: Field validation + duplicate detection + conflict resolution
+
+#### **Signal Triggering Channel**:
+```
+Event Trigger Monitoring
+    ↓ 15-second timer-based monitoring
+Event Time Detection
+    ↓ Offset-based trigger timing (-3 minutes default)
+Parameter Set Selection
+    ↓ Simple 4-set rotation (0.01, 0.02, 0.03, 0.04 lots)
+Signal Generation Integration
+    ↓ Existing SignalEntrySheet.bas integration
+```
+- **Data**: Trading signals with calendar event context
+- **Frequency**: Real-time monitoring with 15-second precision
+- **Implementation**: Timer system + existing signal infrastructure
+- **Parameters**: Fixed parameter sets differing only by lot size
+
+### **Calendar System Advantages**:
+1. **Automated Import**: No manual calendar management required
+2. **Intelligent Processing**: Duplicate detection + event enhancement
+3. **Real-time Monitoring**: Precise event timing with offset triggers
+4. **Seamless Integration**: Works with existing MT4-Excel infrastructure
+5. **Risk Management**: Built-in event blocking and validation
+6. **User Control**: Manual overrides and configuration flexibility
+
+---
+
+## Complete Module Architecture - Every Calendar Component Mapped
+
+### 🔵 CALENDAR SYSTEM VBA MODULES (.bas files)
+
+#### **PHASE 1: CORE INFRASTRUCTURE**
+
+##### **system_infrastructure.bas** - Critical System Foundation
+**Role**: Core system infrastructure - timers, file access, MT4 validation, state persistence
+**Dependencies**: None (Root infrastructure module)
+**Priority**: CRITICAL - Must load first before any calendar functionality
+
+**Core Functions**:
+```vba
+' System Initialization
+InitializeSystemInfrastructure() → Complete system setup and validation
+ValidateExcelEnvironment() → Check Excel version and macro settings
+InitializeFileSystemPaths() → Setup Downloads, Archive, MT4 paths
+ValidateFileSystemAccess() → Test folder access and permissions
+ValidateMT4Integration() → Verify MT4 connection and signal folders
+
+' Timer Management System  
+InitializeTimerSystem() → Setup 15-second monitoring timer
+StartSystemTimer() → Begin calendar monitoring loop
+SystemTimerCallback() → Main timer execution function
+StopSystemTimer() → Stop all calendar monitoring
+RecoverTimerSystem() → Automatic timer recovery on failure
+
+' File System Management
+CreateDirectoryIfNotExists(dirPath) → Safe directory creation
+TestFolderAccess(folderPath, folderName) → Validate folder permissions
+GetDownloadsPath() → Get user Downloads folder path
+GetArchivePath() → Get calendar archive folder path
+GetMT4DataPath() → Auto-detect MT4 data directory
+
+' System State Management
+SaveSystemState() → Persist system configuration
+LoadSystemState() → Restore system state on startup
+GetSystemStartTime() → System initialization timestamp
+GetLastHeartbeat() → Last system health check time
+
+' Emergency Procedures
+EmergencySystemShutdown(reason) → Critical system shutdown
+PerformSystemHealthCheck() → Calculate system health score (0-100)
+ExecuteSystemMonitoring() → Monitor critical components
+```
+
+**System State Structure**:
+```vba
+Named Ranges (System Infrastructure):
+├── SystemInitialized: Boolean - System ready status
+├── SystemStartTime: Date - Initialization timestamp
+├── TimerActive: Boolean - Timer system running status
+├── FileSystemVerified: Boolean - File access confirmed
+├── MT4ConnectionVerified: Boolean - MT4 integration confirmed
+├── LastHeartbeat: Date - Last health check timestamp
+├── SystemHealthScore: Integer - Health score (0-100)
+├── LastParameterSet: Integer - Last used parameter set (1-4)
+├── DownloadsPath: String - Downloads folder path
+├── ArchivePath: String - Archive folder path
+└── MT4DataPath: String - MT4 data directory path
+
+Health Score Calculation:
+├── Timer System (25 points): Active timer + failure count
+├── File System (25 points): Verified folder access
+├── MT4 Connection (25 points): Verified signal integration
+├── System Uptime (25 points): Continuous operation time
+└── Total Score: 0-100 (Excellent: 90+, Good: 70+, Poor: 50+, Critical: <50)
+```
+
+##### **data_store_manager.bas** - Centralized Data Management System
+**Role**: Central data repository for all dashboard and system components
+**Dependencies**: system_infrastructure.bas, FormHelpersUtilities.bas
+**Priority**: HIGH - Required for all dashboard functionality
+
+**Core Functions**:
+```vba
+' Data Store Initialization
+InitializeDataStore() → Setup centralized data repository
+CreateDataStoreSheet() → Create hidden DataStore worksheet
+SetupDataStoreStructure() → Define data storage areas
+InitializeCalendarDataArea() → Setup calendar event storage
+
+' Calendar Data Management
+UpdateCalendarData(calendarData) → Store processed calendar events
+GetCalendarData() → Retrieve calendar events for displays
+GetActiveCalendarEvents() → Get events for current timeframe
+GetNextCalendarEvent() → Get next upcoming event
+
+' System Data Management
+UpdateSystemStatus(healthScore, timerStatus, mt4Status, calendarStatus) → System health
+GetSystemStatus() → Retrieve current system status
+UpdateParameterSetState(lastUsedSet) → Track parameter set rotation
+
+' Data Change Events
+OnCalendarDataChanged() → Trigger calendar data refresh
+NotifyDashboardsOfDataChange(dataType) → Update dashboard displays
+MarkAllDataDirty() → Force refresh of all data
+IsDataDirty(dataType) → Check if data needs refresh
+```
+
+**Data Store Layout**:
+```vba
+DataStore Sheet Structure:
+├── Row 1-2: Account Data (existing integration)
+├── Row 3-102: Trades Data (existing integration) 
+├── Row 104-203: Calendar Events (NEW - up to 100 events)
+├── Row 206-207: System Status (NEW - health monitoring)
+├── Row 208-212: Parameter Sets (NEW - 4 fixed sets)
+├── Row 214-513: Performance History (existing)
+
+Calendar Data Fields (Row 104-203):
+├── Column A: Date - Event date
+├── Column B: Time - Event time in CST
+├── Column C: Title - Event name/description
+├── Column D: Country - Currency code (USD, EUR, GBP, etc.)
+├── Column E: Impact - High/Medium/Low
+├── Column F: EventType - Economic/Anticipation/Equity
+├── Column G: ParameterSet - Assigned parameter set (1-4)
+├── Column H: Enabled - User toggle (TRUE/FALSE)
+├── Column I: TriggerTime - Calculated trigger time (event time - offset)
+├── Column J: Status - PENDING/TRIGGERED/COMPLETED/BLOCKED
+└── Column K: LastUpdate - Data refresh timestamp
+
+System Status Fields (Row 206-207):
+├── SystemHealth: EXCELLENT/GOOD/POOR/CRITICAL
+├── TimerStatus: RUNNING/STOPPED/FAILED
+├── MT4Status: CONNECTED/DISCONNECTED/UNKNOWN
+├── CalendarStatus: LOADED/EMPTY/ERROR
+├── LastUpdate: Status update timestamp
+└── Uptime: Hours since system start
+```
+
+##### **error_handling_system.bas** - Comprehensive Error Management
+**Role**: Centralized error handling, logging, and user notification system
+**Dependencies**: system_infrastructure.bas
+**Priority**: CRITICAL - Foundation for all error management
+
+**Core Functions**:
+```vba
+' Error Handling Initialization
+InitializeErrorHandling() → Setup error management system
+CreateErrorLogSheet() → Create hidden error log worksheet
+InitializeLogFile() → Setup file-based error logging
+
+' Core Logging Functions
+LogInfo(functionName, message, context) → Information logging
+LogWarning(functionName, message, context) → Warning logging
+LogError(functionName, message, context) → Error logging
+LogCritical(functionName, message, context) → Critical error logging
+LogVBAError(functionName, errorNumber, description, context) → VBA error logging
+LogCategorized(severity, category, functionName, message, context) → Categorized logging
+
+' Error Recovery Functions
+AttemptRecovery(category, context) → Attempt system recovery
+RecoverTimerSystem() → Restart failed timer system
+RecoverFileSystemAccess() → Restore file access
+RecoverMT4Connection() → Restore MT4 integration
+RecoverDataProcessing() → Restore data processing
+
+' Notification System
+ShowStatusBarMessage(entry) → Status bar notifications
+ShowDashboardBanner(entry) → Dashboard banner alerts
+ShowModalAlert(entry) → Critical error popups
+HandleUserNotification(entry, notifyType) → Smart notification routing
+```
+
+**Error Handling Structure**:
+```vba
+Error Severity Levels:
+├── SEVERITY_INFO: General information
+├── SEVERITY_WARNING: Non-critical issues
+├── SEVERITY_ERROR: Operational errors
+└── SEVERITY_CRITICAL: System-threatening errors
+
+Error Categories:
+├── CAT_SYSTEM: Core system errors
+├── CAT_TIMER: Timer system errors
+├── CAT_FILE_SYSTEM: File access errors
+├── CAT_CALENDAR: Calendar processing errors
+├── CAT_SIGNAL_PROCESSING: Signal generation errors
+├── CAT_DASHBOARD: Dashboard display errors
+└── CAT_USER_ACTION: User interaction errors
+
+Error Log Entry Structure:
+├── Timestamp: Error occurrence time
+├── Severity: Error severity level
+├── Category: Error category
+├── FunctionName: Function where error occurred
+├── ErrorNumber: VBA error number (if applicable)
+├── Description: Error description
+├── Context: Additional context information
+├── UserAction: Recommended user action
+├── Resolution: How error was resolved
+└── Logged: Successfully logged flag
+```
+
+##### **dashboard_framework.bas** - Base Dashboard System
+**Role**: Framework for all dashboard sheets with common functionality
+**Dependencies**: system_infrastructure.bas, data_store_manager.bas
+**Priority**: HIGH - Required for all dashboard sheets
+
+**Core Functions**:
+```vba
+' Dashboard Framework Initialization
+InitializeDashboardFramework() → Setup dashboard system
+RegisterDashboard(sheetName, title, quadrantCount, refreshInterval) → Register dashboard
+CreateDashboardSheet(sheetName, title) → Create dashboard worksheet
+
+' Dashboard Layout Management
+SetupDashboardGrid(ws) → Setup grid layout system
+SetupDashboardHeader(ws, title) → Create dashboard header
+CreateQuadrant(ws, quadrantName, startRow, startCol, height, width, title) → Create quadrant
+ToggleQuadrantCollapse(ws, quadrantName) → Expand/collapse sections
+
+' Dashboard Display Functions
+SetStatusIndicator(ws, cellAddress, status, message) → Visual status indicators
+SetProgressBar(ws, cellRange, percentage, label) → Progress bar displays
+RefreshDashboard(sheetName) → Update dashboard data
+GetDashboardCell(ws, quadrantName, relativeRow, relativeCol) → Get quadrant cell
+
+' Dashboard Utilities
+SetupDashboardStyles(ws) → Apply consistent formatting
+AddGridReferences(ws) → Add development grid markers
+```
+
+**Dashboard Layout Structure**:
+```vba
+Dashboard Grid System:
+├── Grid Size: 40 rows × 20 columns
+├── Quadrant Size: 18 rows × 9 columns each
+├── Header Area: Rows 1-3 (title, status, controls)
+├── Content Area: Rows 4-40 (4 quadrants max)
+
+Dashboard Components:
+├── TradingDashboard: Account + Trades + System Health + Performance
+├── CalendarControl: Events + Config + Parameter Sets + Manual Controls
+├── EventManagement: Blocked Periods + Duplicates + Toggles + Logs
+├── Analytics: Signal History + Results + Performance + Statistics
+└── SystemConfig: Config + File System + MT4 + Advanced Settings
+
+Status Indicators:
+├── ● Green: Excellent status
+├── ● Yellow: Good status with minor issues
+├── ⚠ Orange: Warning status requiring attention
+├── ✗ Red: Error status requiring immediate action
+└── ○ Gray: Offline/unknown status
+```
+
+#### **PHASE 2: CALENDAR SYSTEM MODULES**
+
+##### **calendar_import_engine.bas** - Complete Calendar Import System
+**Role**: File detection, validation, import processing, CSV parsing, scheduling
+**Dependencies**: system_infrastructure.bas, data_store_manager.bas, error_handling_system.bas
+**Priority**: HIGH - Core calendar functionality
+
+**Core Functions**:
+```vba
+' Import Engine Initialization
+InitializeCalendarImportEngine() → Setup import system
+LoadImportConfiguration() → Load import settings
+LoadImportState() → Restore import state
+InitializeImportStatistics() → Setup statistics tracking
+
+' Main Import Functions
+ExecuteCalendarImport(manualTrigger) → Execute calendar import
+FindCalendarFile() → Locate calendar files in Downloads
+SelectBestCalendarFile(fileCollection) → Choose best file from multiple
+ValidateCalendarFile(filePath) → Validate file before processing
+ParseCalendarCSV(filePath) → Parse CSV into structured data
+
+' File Detection & Validation
+FindFilesByPattern(folderPath, pattern) → Search files by pattern
+IsValidCalendarFileName(fileName) → Validate filename format
+IsFileAccessible(filePath) → Test file access permissions
+ValidateFileContent(filePath) → Peek at file content structure
+
+' CSV Parsing Functions
+ParseCSVHeader(headerLine) → Map CSV columns dynamically
+ParseCSVData(csvLines, columnMapping) → Parse data rows
+SplitCSVLine(csvLine) → Handle CSV field splitting
+ParseCalendarDate(dateString) → Parse various date formats
+ParseCalendarTime(timeString) → Parse time with AM/PM support
+NormalizeImpactLevel(impactString) → Standardize impact levels
+
+' Import Scheduling
+ScheduleNextImport() → Schedule Sunday 12 PM import
+ScheduleImportRetry() → Schedule hourly retry
+ExecuteScheduledCalendarImport() → Scheduled import entry point
+GetNextSundayNoon() → Calculate next Sunday 12 PM
+
+' File Management
+ArchiveCalendarFile(filePath) → Archive processed files
+CleanupOldCalendarFiles() → Remove files older than 7 days
+
+' Import Success/Failure Handling
+HandleImportSuccess(filePath, startTime, manualTrigger) → Success processing
+HandleImportFailure(errorMessage, manualTrigger) → Failure processing
+SaveImportState() → Persist import state
+```
+
+**Import Configuration Structure**:
+```vba
+Import Configuration:
+├── IMPORT_DAY: 1 (Sunday)
+├── IMPORT_HOUR: 12 (12 PM CST)
+├── RETRY_INTERVAL_HOURS: 1 (hourly retries)
+├── MAX_RETRY_ATTEMPTS: 24 (24 hour retry window)
+├── IMPORT_TIMEOUT_SECONDS: 30 (operation timeout)
+
+File Search Patterns (Priority Order):
+├── "ff_calendar*.csv" (ForexFactory - highest priority)
+├── "*calendar*thisweek*.csv" (This week calendars)
+├── "*economic*calendar*.csv" (Economic calendar files)
+├── "*calendar*.csv" (General calendar files)
+└── "*forex*.csv" (Forex calendar files)
+
+Import Statistics:
+├── TotalAttempts: Count of all import attempts
+├── SuccessfulImports: Count of successful imports
+├── FailedImports: Count of failed imports
+├── FilesProcessed: Count of files processed
+├── AverageImportTime: Average processing time
+├── LastError: Last error message
+├── ImportRetryCount: Current retry count
+└── LastImportedFile: Path of last imported file
+
+CSV Column Mapping:
+├── Title: "title", "event", "name", "description"
+├── Country: "country", "currency", "cur", "symbol"
+├── Date: "date", "day", "time_date"
+├── Time: "time", "hour", "minute"
+├── Impact: "impact", "importance", "volatility"
+├── Forecast: "forecast", "expected", "consensus"
+├── Previous: "previous", "prior", "last"
+└── URL: "url", "link", "source"
+```
+
+##### **calendar_data_processor.bas** - Calendar Data Transformation & Validation Pipeline
+**Role**: Transform raw CSV data into clean, validated, standardized calendar events
+**Dependencies**: system_infrastructure.bas, data_store_manager.bas, error_handling_system.bas
+**Priority**: HIGH - Core data processing functionality
+
+**Core Functions**:
+```vba
+' Data Processor Initialization
+InitializeCalendarDataProcessor() → Setup data processing system
+LoadProcessingConfiguration() → Load processing settings
+InitializeValidationRules() → Setup validation rules
+InitializeProcessingStatistics() → Setup processing metrics
+
+' Main Processing Functions
+ProcessCalendarData(rawCalendarData, sourceFile) → Main processing pipeline
+TransformRawData(rawData) → Convert raw data to structured events
+ValidateAndFilterEvents(structuredEvents) → Validate and filter events
+ApplyFinalProcessing(validatedEvents) → Final processing steps
+
+' Data Transformation Functions
+TransformSingleEvent(rawData, eventIndex) → Transform individual event
+CleanEventTitle(rawTitle) → Clean and standardize event titles
+StandardizeCountryCode(rawCountry) → Convert country to currency code
+ConvertToCST(eventDate, eventTime) → Convert to Central Standard Time
+MapImpactToCode(impactLevel) → Convert impact to system codes
+DetermineEventType(eventData) → Categorize event type
+
+' Time Zone Conversion Functions
+IsDateInDST(checkDate) → Check if date is in Daylight Saving Time
+GetNthSundayOfMonth(targetYear, targetMonth, nthWeek) → Calculate DST dates
+
+' Event Validation Functions
+ValidateSingleEvent(events, eventIndex) → Validate individual event
+ApplyEventFiltering(validatedEvents) → Apply additional filters
+RemoveBasicDuplicates(events) → Remove duplicate events
+SortEventsByQuality(events) → Sort by quality score
+
+' Quality Scoring Functions
+CalculateEventQualityScore(eventData) → Calculate data quality score (0-100)
+
+' Final Processing Functions
+SortEventsChronologically(events) → Sort events by date/time
+AddProcessingMetadata(events) → Add processing session info
+CalculateFinalStatistics() → Calculate processing statistics
+```
+
+**Data Processing Structure**:
+```vba
+Processing Configuration:
+├── PROCESSING_TIMEOUT_SECONDS: 60 (max processing time)
+├── MAX_EVENTS_PER_IMPORT: 200 (maximum events per import)
+├── MIN_EVENT_TITLE_LENGTH: 3 (minimum title length)
+├── MAX_EVENT_TITLE_LENGTH: 100 (maximum title length)
+├── PAST_EVENT_TOLERANCE: 1 (days to include past events)
+├── FUTURE_EVENT_RANGE: 14 (days to include future events)
+├── MIN_DATA_QUALITY_SCORE: 60 (minimum quality score)
+
+Time Zone Constants:
+├── BASE_TIMEZONE: "CST" (Central Standard Time)
+├── DST_START_MONTH: 3 (March)
+├── DST_START_WEEK: 2 (Second Sunday)
+├── DST_END_MONTH: 11 (November)
+├── DST_END_WEEK: 1 (First Sunday)
+
+Validation Configuration:
+├── RequireTitle: TRUE (title required)
+├── RequireCountry: TRUE (country required)
+├── RequireDate: TRUE (date required)
+├── RequireTime: TRUE (time required)
+├── RequireImpact: TRUE (impact required)
+├── AllowFutureDates: TRUE (future events allowed)
+├── AllowPastDates: TRUE (past events allowed)
+├── FilterByImpact: TRUE (filter by impact level)
+└── FilterByDateRange: TRUE (filter by date range)
+
+Event Structure (13 columns):
+├── Column 0: Title (cleaned and standardized)
+├── Column 1: Country (3-letter currency code)
+├── Column 2: Date (parsed date object)
+├── Column 3: Time (parsed time object)
+├── Column 4: Impact (High/Medium/Low)
+├── Column 5: Forecast (expected value)
+├── Column 6: Previous (previous reading)
+├── Column 7: URL (source link)
+├── Column 8: DateTime (combined CST timestamp)
+├── Column 9: ImpactCode (EMO-E/EMO-A/EMO-L)
+├── Column 10: QualityScore (0-100 data quality)
+├── Column 11: EventType (event category)
+└── Column 12: ProcessingNotes (validation messages)
+
+Impact Code Mapping:
+├── "HIGH" → "EMO-E" (Economic Major - Extreme)
+├── "MEDIUM" → "EMO-A" (Economic Major - Average)
+├── "LOW" → "EMO-L" (Economic Major - Low)
+└── "HOLIDAY" → "HOL" (Holiday)
+
+Quality Scoring:
+├── Required Fields (20 points each): Title, Country, Date, Time, Impact
+├── Optional Fields (5 points each): Forecast, Previous, URL
+├── Title Quality Bonus (5 points): Descriptive titles (>20 characters)
+├── Impact Level Bonus: High (10 points), Medium (5 points)
+└── Total Possible Score: 100 points
+```
+
+##### **parameter_set_manager.bas** - 4-Parameter Set Management
+**Role**: Manage 4 fixed parameter sets with lot size variations
+**Dependencies**: system_infrastructure.bas, data_store_manager.bas
+**Priority**: MEDIUM - Signal generation parameter management
+
+**Core Functions**:
+```vba
+' Parameter Set Initialization
+InitializeParameterSets() → Setup 4 fixed parameter sets
+LoadParameterSetConfiguration() → Load parameter configuration
+SaveParameterSetConfiguration() → Save parameter settings
+
+' Parameter Set Management
+GetParameterSet(setID) → Retrieve specific parameter set
+GetNextParameterSetID() → Get next parameter set in rotation
+SelectParameterSetForEvent(eventData) → Choose parameter set for event
+UpdateParameterSetUsage(setID) → Track parameter set usage
+
+' Parameter Set Configuration
+ConfigureParameterSet(setID, parameters) → Configure specific set
+ValidateParameterSet(parameters) → Validate parameter values
+ResetParameterSetsToDefaults() → Reset all sets to defaults
+
+' Selection Logic Functions
+SelectParameterSetSequential() → Sequential rotation (1,2,3,4,1,2...)
+SelectParameterSetRandom() → Random selection (1-4)
+SelectParameterSetImpactBased(eventData) → Selection based on event impact
+GetLastUsedParameterSet() → Get last used parameter set
+SetLastUsedParameterSet(setID) → Update last used parameter set
+```
+
+**Parameter Set Structure**:
+```vba
+Fixed Parameter Sets (Only lot size differs):
+SET_1 (Micro): {
+    lot_size: 0.01,          // Micro lot
+    stop_loss: 20,           // pips
+    take_profit: 40,         // pips
+    buy_distance: 10,        // pips
+    sell_distance: 10,       // pips
+    expire_hours: 24,        // hours
+    trailing_stop: 0,        // disabled
+    max_spread: 3            // pips
+}
+
+SET_2 (Small): {
+    lot_size: 0.02,          // All other parameters identical
+    stop_loss: 20,
+    take_profit: 40,
+    buy_distance: 10,
+    sell_distance: 10,
+    expire_hours: 24,
+    trailing_stop: 0,
+    max_spread: 3
+}
+
+SET_3 (Medium): {
+    lot_size: 0.03,          // All other parameters identical
+    stop_loss: 20,
+    take_profit: 40,
+    buy_distance: 10,
+    sell_distance: 10,
+    expire_hours: 24,
+    trailing_stop: 0,
+    max_spread: 3
+}
+
+SET_4 (Large): {
+    lot_size: 0.04,          // All other parameters identical
+    stop_loss: 20,
+    take_profit: 40,
+    buy_distance: 10,
+    sell_distance: 10,
+    expire_hours: 24,
+    trailing_stop: 0,
+    max_spread: 3
+}
+
+Selection Methods:
+├── SEQUENTIAL: Rotate through sets 1→2→3→4→1...
+├── RANDOM: Random selection from sets 1-4
+├── IMPACT_BASED: High impact = Set 4, Medium = Set 3, Other = Set 1
+└── USER_DEFINED: Manual selection method
+
+Parameter Set State:
+├── LastUsedParameterSet: Integer (1-4)
+├── ParameterSetMethod: String (SEQUENTIAL/RANDOM/IMPACT_BASED)
+├── TotalUsageCount: Array of usage counts per set
+├── LastSelectionTime: Timestamp of last selection
+└── SelectionStatistics: Usage statistics per set
+```
+
+##### **event_trigger_engine.bas** - Real-time Event Monitoring
+**Role**: Real-time event monitoring and signal triggering
+**Dependencies**: system_infrastructure.bas, data_store_manager.bas, parameter_set_manager.bas
+**Priority**: HIGH - Core triggering functionality
+
+**Core Functions**:
+```vba
+' Trigger Engine Initialization
+InitializeEventTriggerEngine() → Setup real-time monitoring
+LoadTriggerConfiguration() → Load trigger settings
+StartEventMonitoring() → Begin event monitoring
+StopEventMonitoring() → Stop event monitoring
+
+' Event Monitoring Functions
+MonitorActiveEvents() → Check for triggered events
+CheckEventTrigger(event) → Check if event should trigger
+CalculateTriggerTime(event) → Calculate event trigger time
+IsEventReadyToTrigger(event) → Check if event is ready
+GetNextUpcomingEvent() → Get next event to trigger
+
+' Signal Triggering Functions
+TriggerEventSignal(event) → Trigger signal for event
+ProcessEventTrigger(event) → Process triggered event
+GenerateSignalFromEvent(event, parameterSet) → Create signal from event
+SendSignalToSignalEntry(signalData) → Send to existing signal system
+
+' Trigger Configuration
+SetTriggerOffset(eventType, offsetMinutes) → Configure trigger offsets
+GetTriggerOffset(eventType) → Get offset for event type
+ValidateTriggerConfiguration() → Validate trigger settings
+
+' Event Status Management
+UpdateEventStatus(event, status) → Update event status
+GetActiveEvents() → Get events ready for monitoring
+GetTriggeredEvents() → Get recently triggered events
+GetCompletedEvents() → Get completed events
+```
+
+**Trigger Engine Structure**:
+```vba
+Trigger Offsets (Minutes before event):
+├── EMO-E (High Impact): -3 minutes
+├── EMO-A (Medium Impact): -2 minutes
+├── EQT-OPEN (Equity Markets): -5 minutes
+├── ANTICIPATION: -1 minute
+└── USER_DEFINED: Configurable offset
+
+Event Statuses:
+├── PENDING: Event loaded, waiting for trigger time
+├── READY: Event within trigger window
+├── TRIGGERED: Signal generated for event
+├── COMPLETED: Event processed and finished
+├── BLOCKED: Event blocked by user or system
+├── FAILED: Event trigger failed
+└── EXPIRED: Event trigger window passed
+
+Monitoring Configuration:
+├── MONITOR_INTERVAL_SECONDS: 15 (monitoring frequency)
+├── TRIGGER_PRECISION_SECONDS: 30 (trigger timing precision)
+├── MAX_TRIGGER_ATTEMPTS: 3 (retry failed triggers)
+├── TRIGGER_WINDOW_MINUTES: 5 (window to attempt trigger)
+
+Active Event Queue:
+├── EventID: Unique event identifier
+├── EventTitle: Event name
+├── TriggerTime: Calculated trigger time
+├── ParameterSet: Assigned parameter set (1-4)
+├── Status: Current event status
+├── LastCheck: Last monitoring check time
+├── AttemptCount: Number of trigger attempts
+└── Notes: Processing notes and messages
+```
+
+##### **anticipation_generator.bas** - Anticipation Event Generation
+**Role**: Generate anticipation events from original events
+**Dependencies**: system_infrastructure.bas, data_store_manager.bas
+**Priority**: MEDIUM - Event enhancement functionality
+
+**Core Functions**:
+```vba
+' Anticipation Generator Initialization
+InitializeAnticipationGenerator() → Setup anticipation system
+LoadAnticipationConfiguration() → Load anticipation settings
+SaveAnticipationConfiguration() → Save anticipation settings
+
+' Anticipation Event Generation
+GenerateAnticipationEvents(originalEvents) → Generate anticipation events
+CreateAnticipationEvent(originalEvent, hoursOffset) → Create single anticipation
+GenerateAnticipationForEvent(event, anticipationHours) → Generate for specific event
+ValidateAnticipationEvents(anticipationEvents, originalEvents) → Validate generated events
+
+' Anticipation Configuration
+SetAnticipationHours(hoursArray) → Configure anticipation hours
+GetAnticipationHours() → Get current anticipation hours
+SetMaxAnticipationCount(maxCount) → Set maximum anticipation events
+UpdateAnticipationConfiguration() → Apply configuration changes
+
+' Anticipation Event Formatting
+FormatAnticipationTitle(hoursOffset, originalEvent) → Create anticipation title
+CalculateAnticipationTime(originalTime, hoursOffset) → Calculate anticipation time
+AssignAnticipationParameters(anticipationEvent) → Assign parameter set
+
+' Conflict Detection
+CheckAnticipationConflicts(anticipationEvents, originalEvents) → Check for conflicts
+ResolveAnticipationConflicts(conflicts) → Resolve timing conflicts
+EnsureMinimumGap(events) → Ensure minimum time gaps between events
+```
+
+**Anticipation Configuration Structure**:
+```vba
+Anticipation Settings:
+├── AnticipationHours: [1, 2, 4] (hours before original event)
+├── MaxAnticipationCount: 3 (maximum anticipation events per original)
+├── AnticipationEnabled: TRUE (enable/disable anticipation)
+├── MinimumGapMinutes: 30 (minimum gap between events)
+├── ConflictResolution: AUTO (AUTO/MANUAL conflict resolution)
+
+Anticipation Event Format:
+├── Title: "#{Hours}H Before {OriginalEvent} Anticipation - {Currency} - {Impact}"
+├── Example: "#2H Before NFP Anticipation - USD - High"
+├── EventType: "ANTICIPATION"
+├── Impact: Inherits from original event
+├── ParameterSet: Based on anticipation configuration
+
+Anticipation Event Structure:
+├── OriginalEventID: Reference to source event
+├── HoursOffset: Hours before original event
+├── AnticipationTime: Calculated anticipation trigger time
+├── InheritedImpact: Impact level from original event
+├── ConflictStatus: NO_CONFLICT/RESOLVED/MANUAL_REVIEW
+└── GenerationTime: When anticipation was generated
+
+Conflict Detection Rules:
+├── Minimum Gap: 30 minutes between any two events
+├── Overlap Detection: Check for time conflicts
+├── Priority Rules: Original events take priority over anticipation
+├── Resolution: Adjust anticipation times to avoid conflicts
+└── Manual Review: Flag complex conflicts for user review
+```
+
+##### **calendar_validation.bas** - Data Validation & Quality Control
+**Role**: Comprehensive data validation and quality control
+**Dependencies**: system_infrastructure.bas, error_handling_system.bas
+**Priority**: MEDIUM - Data quality assurance
+
+**Core Functions**:
+```vba
+' Validation System Initialization
+InitializeCalendarValidation() → Setup validation system
+LoadValidationConfiguration() → Load validation rules
+SetValidationRules(rules) → Configure validation parameters
+
+' Event Validation Functions
+ValidateCalendarEvent(eventData) → Validate single event
+ValidateEventBatch(eventsArray) → Validate multiple events
+ValidateRequiredFields(event) → Check required field presence
+ValidateFieldFormats(event) → Check field format validity
+ValidateBusinessRules(event) → Check business logic rules
+
+' Field-Specific Validation
+ValidateEventTitle(title) → Validate event title
+ValidateEventDate(date) → Validate event date
+ValidateEventTime(time) → Validate event time
+ValidateEventImpact(impact) → Validate impact level
+ValidateCountryCode(country) → Validate currency code
+
+' Validation Reporting
+GenerateValidationReport(validationResults) → Create validation report
+GetValidationStatistics() → Get validation statistics
+LogValidationError(event, error) → Log validation errors
+ExportValidationReport() → Export validation results
+```
+
+#### **PHASE 3: DASHBOARD INTEGRATION MODULES**
+
+##### **calendar_control_dashboard.bas** - Calendar Control Dashboard
+**Role**: Main calendar control interface dashboard
+**Dependencies**: dashboard_framework.bas, data_store_manager.bas
+**Priority**: HIGH - User interface
+
+**Core Functions**:
+```vba
+' Dashboard Setup
+SetupCalendarControlDashboard() → Create calendar control dashboard
+InitializeCalendarDashboard() → Setup dashboard layout
+RefreshCalendarDashboard() → Update dashboard data
+
+' Dashboard Sections
+SetupNextEventsSection(ws) → Next events display (EventTriggers data)
+SetupCalendarConfigSection(ws) → Configuration interface
+SetupParameterSetsSection(ws) → Parameter set management
+SetupManualControlsSection(ws) → Manual control buttons
+
+' Event Display Functions
+DisplayUpcomingEvents(ws, events) → Show next events with countdown
+UpdateEventCountdowns(ws) → Update countdown timers
+ShowEventStatus(ws, event, status) → Display event status
+UpdateParameterSetDisplay(ws) → Show current parameter sets
+
+' User Controls
+HandleCalendarControlClicks(target) → Process button clicks
+ToggleEventEnabled(eventID) → Enable/disable specific event
+UpdateAnticipationSettings() → Apply anticipation changes
+RefreshCalendarData() → Manual calendar refresh
+```
+
+**Calendar Control Dashboard Layout**:
+```vba
+Dashboard Layout (4 Quadrants):
+┌─ Next Events (Q1) ────────────┬─ Calendar Config (Q2) ────────┐
+│ 15:30 NFP (in 45 min) - Set 3│ Anticipation: [2,4] hours     │
+│ 16:00 Fed Speech (1h15m) - S1│ Offsets: High=-3, Med=-2      │
+│ 02:00 London Open (tomorrow) │ [Update Calendar] [Test]       │
+│ [Toggle All] [Emergency Stop]│ Import: Sunday 12 PM          │
+├─ Today's Events (Q3) ─────────┼─ Parameter Sets (Q4) ─────────┤
+│ ✓ 08:30 ADP Employment (done) │ Set 1: 0.01 lots [Edit]      │
+│ ○ 15:30 NFP (pending)         │ Set 2: 0.02 lots [Edit]      │
+│ ○ 16:00 Fed Speech (pending)  │ Set 3: 0.03 lots [Edit]      │
+│ Manual: [Import] [Clear]      │ Set 4: 0.04 lots [Edit]      │
+│ Status: [✓] Auto-Triggers     │ Selection: Sequential         │
+│ [✓] Process Anticipation      │ Last Used: Set 2             │
+│ [✗] Emergency Block All       │ [Reset Rotation]             │
+└───────────────────────────────┴───────────────────────────────┘
+
+Dashboard Elements:
+├── Event Countdown Timers: Real-time countdown to next events
+├── Event Status Indicators: ✓ Completed, ○ Pending, ● Active, ✗ Blocked
+├── Parameter Set Display: Current configuration and last used
+├── Manual Control Buttons: Import, refresh, toggle, emergency stop
+├── Configuration Interface: Anticipation hours, offsets, import schedule
+└── Status Monitoring: System health, timer status, connection status
+```
+
+### 🔴 CSV FILE STRUCTURES & DATA FLOWS
+
+#### **Calendar Import Files (Downloads Folder)**
+
+##### **Primary Calendar CSV Format (ForexFactory)**:
+```csv
+File: ff_calendar_thisweek.csv
+Location: %USERPROFILE%\Downloads\
+
+Headers: Title,Country,Date,Time,Impact,Forecast,Previous,URL
+
+Sample Data:
+Non-Farm Employment Change,USD,12-05-2024,14:30,High,180K,150K,https://...
+Federal Reserve Chair Powell Speaks,USD,12-05-2024,16:00,High,,,https://...
+ADP Non-Farm Employment Change,USD,12-04-2024,14:15,Medium,150K,143K,https://...
+Consumer Price Index m/m,EUR,12-06-2024,11:00,High,0.3%,0.2%,https://...
+```
+
+##### **Secondary Calendar CSV Format (Generic)**:
+```csv
+File: economic_calendar_2024.csv
+Location: %USERPROFILE%\Downloads\
+
+Headers: Event,Currency,Date,Time,Importance,Expected,Previous,Link
+
+Sample Data:
+NFP,USD,2024-12-05,2:30 PM,High,180K,150K,
+ECB Rate Decision,EUR,2024-12-06,8:45 AM,High,4.50%,4.50%,
+PMI Manufacturing,GBP,2024-12-04,9:30 AM,Medium,52.1,51.8,
+```
+
+#### **Processed Calendar Data (DataStore)**
+
+##### **Internal Calendar Data Structure**:
+```vba
+Processed Event Structure (13 fields):
+├── [0] Title: "Non-Farm Employment Change"
+├── [1] Country: "USD" (standardized currency code)
+├── [2] Date: 12/05/2024 (Excel date object)
+├── [3] Time: 2:30 PM (Excel time object)
+├── [4] Impact: "High" (standardized impact level)
+├── [5] Forecast: "180K" (expected value)
+├── [6] Previous: "150K" (previous reading)
+├── [7] URL: "https://..." (source link)
+├── [8] DateTime: 12/05/2024 2:30 PM CST (combined timestamp)
+├── [9] ImpactCode: "EMO-E" (system impact code)
+├── [10] QualityScore: 95 (data quality score 0-100)
+├── [11] EventType: "EMPLOYMENT" (event category)
+└── [12] ProcessingNotes: "Validation passed"
+
+Enhanced Event Structure (with anticipation):
+├── Original Event: Non-Farm Employment Change at 14:30
+├── Anticipation 1: "#1H Before NFP Anticipation - USD - High" at 13:30
+├── Anticipation 2: "#2H Before NFP Anticipation - USD - High" at 12:30
+└── Anticipation 3: "#4H Before NFP Anticipation - USD - High" at 10:30
+```
+
+#### **Signal Generation Integration**
+
+##### **Calendar-to-Signal Data Flow**:
+```vba
+Calendar Event Trigger → Parameter Set Selection → Signal Generation
+
+Event Data:
+├── EventTitle: "Non-Farm Employment Change"
+├── TriggerTime: 14:27 (3 minutes before 14:30 event)
+├── Impact: "EMO-E" (High impact)
+├── ParameterSet: 3 (selected by rotation/logic)
+
+Generated Signal Data:
+├── Symbol: "EURUSD" (primary affected pair for USD events)
+├── BuyDistance: 10 pips (from parameter set 3)
+├── SellDistance: 10 pips (from parameter set 3)
+├── StopLoss: 20 pips (from parameter set 3)
+├── TakeProfit: 40 pips (from parameter set 3)
+├── LotSize: 0.03 (from parameter set 3)
+├── ExpireHours: 24 (from parameter set 3)
+├── TrailingStop: 0 (from parameter set 3)
+├── Comment: "Calendar: NFP" (calendar event identifier)
+├── StrategyID: 301 (calendar-based strategy)
+├── PSetID: 3 (parameter set used)
+└── Timestamp: 2024-12-05 14:27:00 (trigger time)
+```
+
+#### **Integration with Existing Signal System**
+
+##### **Signal Integration Points**:
+```vba
+Calendar System → Existing SignalEntrySheet.bas Integration:
+
+1. Calendar Event Detection (event_trigger_engine.bas)
+   ↓ TriggerEventSignal(event)
+
+2. Parameter Set Selection (parameter_set_manager.bas)
+   ↓ GetParameterSet(setID)
+
+3. Signal Data Creation
+   ↓ GenerateSignalFromEvent(event, parameterSet)
+
+4. Signal Entry Integration (SignalEntrySheet.bas)
+   ↓ ProcessCalendarSignal(signalData)
+
+5. Existing Signal Validation
+   ↓ ValidateSignalRow(ws, row, errorMsg)
+
+6. Existing Signal Export
+   ↓ ExportValidSignalsToCSV(signalsToExport)
+
+7. Existing MT4 Integration
+   ↓ python-watchdog.py → MT4 signal processing
+```
+
+---
+
+## SYSTEM INTEGRATION & COMMUNICATION PROTOCOLS
+
+### **Calendar System Named Ranges**:
+```vba
+Calendar Import Configuration:
+├── CalendarAutoImport: TRUE/FALSE (auto import enabled)
+├── CalendarImportPath: Downloads folder path
+├── CalendarLastImport: Last import timestamp
+├── CalendarNextImport: Next scheduled import time
+├── CalendarImportStatus: SUCCESS/FAILED/PENDING
+├── CalendarRetryCount: Current retry attempt count
+├── CalendarLastFile: Last imported file path
+
+Calendar Processing Configuration:
+├── AnticipationHours: [1,2,4] (anticipation hours array)
+├── AnticipationCount: 3 (max anticipation events)
+├── AnticipationEnabled: TRUE/FALSE
+├── TriggerOffsets: Offset configuration object
+├── ParameterSetMethod: SEQUENTIAL/RANDOM/IMPACT_BASED
+├── LastUsedParameterSet: 1-4 (last used parameter set)
+
+Calendar Data Status:
+├── ActiveCalendarEvents: Count of active events
+├── NextEventTime: Next upcoming event time
+├── CalendarValidationErrors: Count of validation errors
+├── DuplicateResolutionLog: Duplicate processing log
+├── EventToggleStates: User event toggles
+├── ProcessingSessionID: Current processing session
+├── CalendarDataVersion: Data version for change detection
+
+System Health Monitoring:
+├── SystemHealthScore: 0-100 system health score
+├── TimerStatus: RUNNING/STOPPED/FAILED
+├── CalendarSystemStatus: ACTIVE/STOPPED/ERROR
+├── LastSystemHeartbeat: Last health check time
+├── ImportEngineStatus: READY/BUSY/ERROR
+├── TriggerEngineStatus: MONITORING/STOPPED/ERROR
+```
+
+### **Dashboard Refresh Integration**:
+```vba
+Calendar Dashboard Auto-Refresh:
+├── Global Refresh Timer: 15-second intervals (synced with event monitoring)
+├── Calendar Control Dashboard: Real-time countdown updates
+├── Event Management Dashboard: Event status updates
+├── Analytics Dashboard: Processing statistics updates
+├── System Config Dashboard: Health status updates
+
+Refresh Triggers:
+├── Timer-based: 15-second intervals for active monitoring
+├── Event-based: Data change notifications from DataStore
+├── User-triggered: Manual refresh buttons
+├── Import-triggered: New calendar data imported
+├── Configuration-triggered: Settings changed
+
+Data Change Events:
+├── OnCalendarDataChanged() → Refresh calendar displays
+├── OnEventTriggered() → Update event status displays
+├── OnParameterSetChanged() → Update parameter displays
+├── OnSystemHealthChanged() → Update health indicators
+└── OnImportCompleted() → Refresh import status displays
+```
+
+### **Error Recovery & Graceful Degradation**:
+```vba
+Calendar System Error Recovery:
+├── Import Failure: Continue with last good calendar, retry hourly
+├── Timer Failure: Restart timer system, log failure, notify user
+├── File Access Failure: Try alternate paths, request permissions
+├── MT4 Connection Failure: Queue signals, show warning, continue monitoring
+├── Data Corruption: Revert to backup, re-import from source
+├── Parameter Set Error: Use default parameter set, log error
+
+Graceful Degradation Levels:
+├── Level 1: Continue with cached data, show warnings
+├── Level 2: Disable specific features, maintain core functionality
+├── Level 3: Switch to manual mode, disable automation
+├── Level 4: Emergency stop, require user intervention
+
+Recovery Procedures:
+├── Automatic: Self-healing for common issues
+├── Semi-automatic: User confirmation for major changes
+├── Manual: User intervention required for critical issues
+├── Emergency: Complete system shutdown for safety
+```
+
+---
+
+## DEVELOPMENT PATTERNS & IMPLEMENTATION STANDARDS
+
+### **Calendar Module Standard Pattern**:
+```vba
+' ========================================
+' [module_name].bas - [Purpose Description]
+' Role: [Detailed role in calendar system]
+' Dependencies: [Required modules]
+' Priority: [CRITICAL/HIGH/MEDIUM/LOW]
+' ========================================
+
+Option Explicit
+
+' Module Constants
+Public Const [MODULE]_TIMEOUT_SECONDS As Integer = 30
+Public Const [MODULE]_MAX_ITEMS As Integer = 100
+
+' Module State Variables
+Private g_[Module]Initialized As Boolean
+Private g_[Module]Configuration As [ConfigType]
+Private g_Last[Module]Update As Date
+
+' Module Statistics
+Private Type [Module]Statistics
+    Total[Items] As Long
+    Successful[Operations] As Long
+    Failed[Operations] As Long
+    Average[Metric] As Double
+    LastError As String
+End Type
+
+Private g_[Module]Stats As [Module]Statistics
+
+' ========================================
+' [MODULE] INITIALIZATION
+' ========================================
+
+Public Function Initialize[Module]() As Boolean
+    On Error GoTo ErrorHandler
+    
+    ' Verify prerequisites
+    If Not IsSystemInitialized() Then
+        LogCategorized SEVERITY_ERROR, CAT_CALENDAR, "Initialize[Module]", "System not initialized"
+        Exit Function
+    End If
+    
+    ' Initialize module configuration
+    Call Load[Module]Configuration()
+    
+    ' Setup module state
+    Call Initialize[Module]State()
+    
+    g_[Module]Initialized = True
+    
+    LogCategorized SEVERITY_INFO, CAT_CALENDAR, "Initialize[Module]", "[Module] initialized successfully"
+    Initialize[Module] = True
+    
+    Exit Function
+    
+ErrorHandler:
+    LogVBAError "Initialize[Module]", Err.Number, Err.Description
+    Initialize[Module] = False
+End Function
+
+' ========================================
+' [MODULE] CORE FUNCTIONS
+' ========================================
+
+[Additional module-specific functions following same pattern]
+```
+
+### **Calendar Event Processing Pattern**:
+```vba
+Function Process[Event]([parameters]) As Boolean
+    On Error GoTo ErrorHandler
+    
+    Dim startTime As Date
+    startTime = Now
+    
+    ' Update statistics
+    g_[Module]Stats.Total[Operations] = g_[Module]Stats.Total[Operations] + 1
+    
+    ' Log operation start
+    LogCategorized SEVERITY_INFO, CAT_CALENDAR, "Process[Event]", "[Event] processing started"
+    
+    ' Main processing logic
+    [Processing steps with validation]
+    
+    ' Success handling
+    g_[Module]Stats.Successful[Operations] = g_[Module]Stats.Successful[Operations] + 1
+    
+    ' Update timing statistics
+    Dim processingTime As Double
+    processingTime = (Now - startTime) * 24 * 60 * 60
+    g_[Module]Stats.Average[Metric] = ((g_[Module]Stats.Average[Metric] * (g_[Module]Stats.Successful[Operations] - 1)) + processingTime) / g_[Module]Stats.Successful[Operations]
+    
+    LogCategorized SEVERITY_INFO, CAT_CALENDAR, "Process[Event]", "[Event] processing completed successfully"
+    Process[Event] = True
+    
+    Exit Function
+    
+ErrorHandler:
+    g_[Module]Stats.Failed[Operations] = g_[Module]Stats.Failed[Operations] + 1
+    g_[Module]Stats.LastError = Err.Description
+    
+    LogVBAError "Process[Event]", Err.Number, Err.Description
+    Process[Event] = False
+End Function
+```
+
+### **Calendar Dashboard Integration Pattern**:
+```vba
+Sub Refresh[Dashboard]Section(ws As Worksheet, sectionName As String)
+    On Error GoTo ErrorHandler
+    
+    ' Get section data from DataStore
+    Dim sectionData As Variant
+    sectionData = Get[Section]Data()
+    
+    If IsEmpty(sectionData) Then
+        ' Handle empty data gracefully
+        Call Display[Section]EmptyState(ws, sectionName)
+        Exit Sub
+    End If
+    
+    ' Update section display
+    Call Update[Section]Display(ws, sectionData)
+    
+    ' Update section timestamp
+    Call UpdateSectionTimestamp(ws, sectionName)
+    
+    LogCategorized SEVERITY_INFO, CAT_DASHBOARD, "Refresh[Dashboard]Section", sectionName & " section refreshed"
+    
+    Exit Sub
+    
+ErrorHandler:
+    LogVBAError "Refresh[Dashboard]Section", Err.Number, Err.Description
+    Call Display[Section]ErrorState(ws, sectionName, Err.Description)
+End Sub
+```
+
+---
+
+## CALENDAR SYSTEM OPERATIONAL PROCEDURES
+
+### **Daily Operations**:
+```vba
+Calendar System Daily Cycle:
+├── 12:00 PM Sunday: Automatic calendar import attempt
+├── 12:00 PM - 11:59 PM Sunday: Hourly retry attempts (if import failed)
+├── Real-time: 15-second event monitoring for trigger detection
+├── Real-time: Dashboard updates every 15 seconds
+├── On-demand: Manual import/refresh capabilities
+├── On-demand: User configuration changes
+├── Continuous: Error monitoring and recovery
+└── Continuous: System health monitoring
+
+Manual Procedures:
+├── Import Calendar: Click [Manual Import] button
+├── Refresh Display: Click [Refresh] buttons on dashboards
+├── Toggle Events: Click individual event toggles
+├── Emergency Stop: Click [Emergency Stop] for immediate halt
+├── Configuration: Modify settings in CalendarConfig dashboard
+└── Diagnostics: View ErrorLog sheet for troubleshooting
+```
+
+### **Maintenance Procedures**:
+```vba
+Weekly Maintenance:
+├── Archive old calendar files (automatic)
+├── Clean up error logs older than 30 days
+├── Verify system health scores
+├── Check import success rates
+└── Review blocked signal statistics
+
+Monthly Maintenance:
+├── Review parameter set performance
+├── Update anticipation hour configuration if needed
+├── Analyze calendar event accuracy
+├── Update economic event patterns
+└── System performance optimization
+
+Configuration Backup:
+├── Export configuration settings regularly
+├── Save named ranges to backup file
+├── Document custom modifications
+├── Test recovery procedures
+└── Maintain system documentation
+```
+
+---
+
+This ultra-detailed documentation provides complete technical specifications for the Economic Calendar to Signal System, covering every module, function, data structure, integration point, and operational procedure necessary for comprehensive system understanding, development, and maintenance. The system seamlessly integrates with the existing MT4-Excel infrastructure while adding sophisticated calendar-based signal generation capabilities.

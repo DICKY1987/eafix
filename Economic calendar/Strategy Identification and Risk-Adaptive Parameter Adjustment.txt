@@ -1,0 +1,358 @@
+AI Logic Specification: Economic Calendar Strategy Identification and Risk-Adaptive Parameter Adjustment
+Version: 1.0
+Date: 2025-06-04
+
+1. Introduction
+This document outlines the logic for:
+
+Generating unique Strategy Identifiers (IDs) based on economic calendar event data.
+
+Dynamically adjusting trading parameters based on account performance, market conditions, and upcoming economic events, with a primary focus on capital preservation and risk control.
+
+The system is designed to be implemented primarily within a Microsoft Excel environment, processing data from CSV files (e.g., from MT4) and economic calendar feeds.
+
+2. Core Inputs and Data Sources
+Economic Calendar Data: CSV file containing upcoming economic events. Expected columns:
+
+EventTitle (string)
+
+Country (string, e.g., "USA", "EUR", "GBP")
+
+Date (date format)
+
+Time (time format)
+
+Impact (string, e.g., "Low", "Medium", "High")
+
+Forecast (string/numeric)
+
+Previous (string/numeric)
+
+URL (string, optional)
+
+Account Performance Data: CSV file from MT4 or a dedicated EA. Expected data points (may need to be derived):
+
+TradeHistory: List of closed trades with P/L, open/close times.
+
+CurrentBalance (numeric)
+
+CurrentEquity (numeric)
+
+Market Data (Potentially from MT4/EA or derived):
+
+MarketVolatility: A numeric indicator of current market volatility (e.g., ATR value for relevant instruments).
+
+CurrentDateTime: System's current date and time.
+
+EquityMarketCloseTime: Time of the relevant equity market close (e.g., NYSE close).
+
+3. Section 1: Strategy ID Generation
+Objective: To create a unique, consistent, and logically structured 5-digit identifier for trading strategies based on Country and Impact from economic calendar events.
+
+3.1. Exclusion Rules for Event Processing:
+
+Rule 1: IF Country = "CHF" (Switzerland), THEN IGNORE event for Strategy ID generation.
+
+Rule 2: IF Impact = "Low", THEN IGNORE event for Strategy ID generation.
+
+Only "Medium" and "High" impact events will generate a Strategy ID.
+
+3.2. Preferred Method: 5-Digit Regional-Country-Impact (RCI) System
+
+The Strategy ID is a 5-digit string: RCCI S
+
+R (1st digit): Economic Region Code
+
+Maps Country to a predefined region.
+
+Mapping Table: RegionMap
+| Region Name      | Code (R) | Countries Included (Examples)     |
+|------------------|----------|-----------------------------------|
+| North America    | 1        | USA, CAD, MXN                     |
+| Europe           | 2        | EUR (Eurozone), GBP               |
+| Asia-Pacific     | 3        | JPY, AUD, NZD, CNY, KRW, SGD, HKD, INR |
+| Latin America    | 4        | BRL                               |
+| Middle East/Africa| 5        | ZAR, TRY, RUB                     |
+| Other            | 9        | Any country not in above regions  |
+
+CC (2nd-3rd digits): Country Code within Region
+
+Maps Country to a 2-digit code, unique within its RegionCode.
+
+Mapping Table: CountryCodeMap (RegionCode as key)
+| RegionCode (R) | Country | Code (CC) |
+|----------------|---------|-----------|
+| 1              | USA     | 01        |
+| 1              | CAD     | 02        |
+| 1              | MXN     | 03        |
+| 2              | EUR     | 01        |
+| 2              | GBP     | 02        |
+| 3              | JPY     | 01        |
+| 3              | AUD     | 02        |
+| ...            | ...     | ...       |
+| 5              | ZAR     | 01        |
+
+I (4th digit): Impact Level Code
+
+Maps event Impact.
+
+Mapping:
+
+IF Impact = "Medium" THEN I = 2
+
+IF Impact = "High" THEN I = 3
+
+S (5th digit): Checksum Digit
+
+Calculation: S = (R + Value(CC) + I) MOD 10
+
+Value(CC) is the numeric value of the 2-digit country code.
+
+Example: If CC="01", Value(CC)=1. If CC="12", Value(CC)=12.
+
+3.3. Strategy ID Generation Logic (RCI):
+
+Receive Country and Impact for an economic event.
+
+Apply Exclusion Rules (Section 3.1). If event is ignored, output "00000" or a designated "ignore" ID.
+
+Lookup R from RegionMap based on Country.
+
+Lookup CC from CountryCodeMap based on R and Country.
+
+Determine I based on Impact.
+
+Calculate S using R, Value(CC), and I.
+
+Concatenate to form 5-digit Strategy ID: String(R) + String(CC) + String(I) + String(S).
+
+Ensure CC is padded with a leading zero if single digit (e.g., "01").
+
+Example RCI ID Generation:
+
+Input: Country="USA", Impact="Medium"
+
+Not excluded.
+
+R = 1 (North America for USA)
+
+CC = "01" (USA in North America)
+
+I = 2 (Medium impact)
+
+S = (1 + 1 + 2) MOD 10 = 4 MOD 10 = 4
+
+Strategy ID = "10124"
+
+3.4. Alternative Method: Hash-Based (Legacy/Simpler Scenarios)
+
+Objective: Generate a numeric ID.
+
+Logic:
+
+CountryHash = CalculateHash(CountryString) (e.g., polynomial rolling hash, sum of ASCII values, modulo a prime).
+Function CalculateHash(text_string):
+hash_value = 0
+prime_multiplier = 31
+modulo_value = 1000
+FOR each character c IN UPPERCASE(TRIM(text_string)):
+hash_value = (hash_value * prime_multiplier + ASCII(c)) MOD modulo_value
+RETURN hash_value
+
+ImpactMultiplier:
+
+IF Impact = "Medium" THEN ImpactMultiplier = 10
+
+IF Impact = "High" THEN ImpactMultiplier = 100
+
+StrategyID_Hash = (CountryHash * ImpactMultiplier) MOD 1000 (or another suitable modulo for desired ID range).
+
+Collision Handling: If different (Country, Impact) pairs result in the same StrategyID_Hash, a resolution mechanism is needed (e.g., use a secondary hash, add a small offset, or manually assign a unique ID). The RCI method is preferred to avoid this.
+
+4. Section 2: Risk-Adaptive Parameter Adjustment
+Objective: To dynamically adjust trading parameters based on a calculated Risk Score, prioritizing capital preservation.
+
+4.1. Derivable Performance Metrics (from Account Performance Data):
+
+DrawdownLast12h: Max percentage drawdown in the last 12 hours.
+
+MaxBalanceInPeriod = MAX(Balance values in last 12h)
+
+MinEquityInPeriodAfterMaxBalance = MIN(Equity values after MaxBalance timestamp within last 12h)
+
+Drawdown = (MaxBalanceInPeriod - MinEquityInPeriodAfterMaxBalance) / MaxBalanceInPeriod * 100
+
+DrawdownLast4h: Max percentage drawdown in the last 4 hours (similar calculation).
+
+ConsecutiveLosses: Current number of consecutive losing trades.
+
+ConsecutiveWins: Current number of consecutive winning trades.
+
+4.2. Time-Based and Market Metrics:
+
+MinutesToNextEvent: Minutes until the next "Medium" or "High" impact economic event.
+
+Requires iterating through Economic Calendar Data.
+
+EventDateTime = Combine(EventDate, EventTime)
+
+MinutesToNextEvent = MIN( (EventDateTime - CurrentDateTime) in minutes ) for all future Medium/High events.
+
+MinutesToEquityMarketClose: Minutes until the relevant equity market (e.g., NYSE) closes.
+
+MarketVolatility: A normalized measure (e.g., ATR / Average ATR over a longer period).
+
+4.3. Risk Score Calculation (RiskScore):
+
+Range: 0 (highest risk, most restrictive) to 100 (lowest risk, least restrictive).
+
+Base Score: 50
+
+Formula (example, coefficients are configurable):
+RiskScore = 50
+RiskScore = RiskScore - (DrawdownLast4h * 8.0)
+RiskScore = RiskScore - (DrawdownLast12h * 4.0)
+RiskScore = RiskScore - (ConsecutiveLosses * 5.0)
+RiskScore = RiskScore + (ConsecutiveWins * 2.0)
+
+IF MinutesToNextEvent < 60 THEN RiskScore = RiskScore - ((60 - MinutesToNextEvent) / 2.0)
+IF MinutesToEquityMarketClose < 120 THEN RiskScore = RiskScore - ((120 - MinutesToEquityMarketClose) / 4.0)
+
+VolatilityFactor = (MarketVolatility / NormalMarketVolatilityBaseline - 1.0) * 15.0
+RiskScore = RiskScore - VolatilityFactor
+
+RiskScore = MAX(0, MIN(100, RiskScore)) (Constrain to 0-100)
+
+NormalMarketVolatilityBaseline: A pre-defined baseline for "normal" volatility.
+
+4.4. Parameter Adjustment Logic:
+Adjustments are based on RiskScore. Base parameters are predefined defaults.
+
+Lot Size (AdjustedLotSize):
+
+LotMultiplier = RiskScore / 100.0 (scales from 0.0 to 1.0)
+
+AdjustedLotSize = BaseLotSize * LotMultiplier
+
+Apply Min/Max Lot Size constraints:
+AdjustedLotSize = MAX(MinLotSize, MIN(MaxLotSize, AdjustedLotSize))
+
+Example Tiers based on RiskScore:
+
+RiskScore < 20 (Emergency): AdjustedLotSize = BaseLotSize * 0.1 or MinLotSize
+
+RiskScore 20-39 (Recovery): AdjustedLotSize = BaseLotSize * 0.25
+
+RiskScore 40-59 (Conservative): AdjustedLotSize = BaseLotSize * 0.5
+
+RiskScore 60-79 (Moderate): AdjustedLotSize = BaseLotSize * 0.75
+
+RiskScore >= 80 (Normal): AdjustedLotSize = BaseLotSize * 1.0
+
+Stop Loss Distance (AdjustedSL):
+
+Widen SL during higher risk (lower RiskScore) to allow more room, but coupled with smaller lot size.
+
+SL_Factor = 1.0 + ((100.0 - RiskScore) / 100.0) * SLWideningMultiplier (e.g., SLWideningMultiplier = 0.5 means SL can widen up to 50%)
+
+AdjustedSL = BaseSL_Pips * SL_Factor
+
+Apply Min/Max SL Pips constraints.
+
+Take Profit Distance (AdjustedTP):
+
+Make TP more conservative (smaller) during higher risk.
+
+TP_Factor = 1.0 - ((100.0 - RiskScore) / 100.0) * TPNarrowingMultiplier (e.g., TPNarrowingMultiplier = 0.5 means TP can narrow up to 50%)
+
+AdjustedTP = BaseTP_Pips * TP_Factor
+
+Ensure AdjustedTP > Min TP threshold (e.g., > spread + commission).
+
+Trading Frequency / Signal Strength (AllowTradeSignal):
+
+IF RiskScore < 30 THEN RequiredSignalStrength = 90 (Only very strong signals)
+
+ELSE IF RiskScore < 60 THEN RequiredSignalStrength = 70
+
+ELSE RequiredSignalStrength = 50 (Standard signals)
+
+Maximum Open Positions (MaxOpenTrades):
+
+IF RiskScore < 20 THEN MaxOpenTrades = 1
+
+ELSE IF RiskScore < 40 THEN MaxOpenTrades = 2
+
+ELSE MaxOpenTrades = BaseMaxOpenTrades (e.g., 3)
+
+Trading Embargo / Pause (AllowSystemTrading):
+
+CalendarSafeToTrade = TRUE
+
+IF (MinutesToNextEvent_HighImpact > 0 AND MinutesToNextEvent_HighImpact < 60) OR (MinutesToNextEvent_HighImpact < 0 AND MinutesToNextEvent_HighImpact > -30) THEN CalendarSafeToTrade = FALSE (embargo 60 mins before, 30 mins after High impact)
+
+IF (MinutesToNextEvent_MediumImpact > 0 AND MinutesToNextEvent_MediumImpact < 30) OR (MinutesToNextEvent_MediumImpact < 0 AND MinutesToNextEvent_MediumImpact > -15) THEN CalendarSafeToTrade = FALSE (embargo 30 mins before, 15 mins after Medium impact)
+
+PerformancePause = FALSE
+
+IF RiskScore < 15 OR ConsecutiveLosses >= 5 THEN PerformancePause = TRUE
+
+AllowSystemTrading = CalendarSafeToTrade AND NOT PerformancePause
+
+4.5. Parameter Smoothing:
+To prevent overly frequent or drastic changes in parameters:
+
+SmoothedParameter = (CurrentCalculatedParameter * WeightCurrent) + (PreviousActualParameter * WeightPrevious)
+
+Example: WeightCurrent = 0.6, WeightPrevious = 0.4
+
+5. Section 3: Data Flow and Implementation Notes (Excel Focus)
+Data Import:
+
+Economic Calendar CSV loaded into "CalendarData" sheet.
+
+MT4 Trade History CSV loaded into "TradeHistory" sheet.
+
+MT4 Account Stats (or data for derivation) loaded into "AccountStats" sheet.
+
+Calculations Sheet ("RiskCalc"):
+
+This sheet will perform most derivations and calculations.
+
+Formulas to calculate DrawdownLast12h, DrawdownLast4h, ConsecutiveLosses, ConsecutiveWins by referencing "TradeHistory" and "AccountStats".
+
+Formulas or VBA to calculate MinutesToNextEvent, MinutesToEquityMarketClose by referencing "CalendarData" and current system time.
+
+Cell for MarketVolatility (can be manually input or from a CSV).
+
+Implement RiskScore formula.
+
+Implement individual parameter adjustment formulas, referencing the RiskScore and base parameter values.
+
+Parameter Tables:
+
+"BaseParameters" sheet: Stores default values for BaseLotSize, BaseSL_Pips, etc.
+
+"AdjustedParameters" sheet: Displays the final calculated parameters to be used or exported.
+
+VBA for Complex Logic (Optional but Recommended):
+
+Calculating MinutesToNextEvent (looping through calendar, handling dates/times).
+
+Deriving ConsecutiveLosses/Wins and drawdown periods if complex.
+
+Orchestrating updates if calculations need to be triggered periodically.
+
+Output:
+
+The "AdjustedParameters" sheet provides the set of parameters to be used by the trading system.
+
+This could be manually referenced or a process could export this sheet/data to a CSV for MT4 to read.
+
+6. Conclusion
+This system provides a structured approach to:
+
+Categorizing trading opportunities using a logical Strategy ID based on economic events.
+
+Implementing a dynamic risk management layer that adjusts trading behavior in response to performance and market conditions.
+The primary goal is to enhance consistency and protect capital, especially during adverse periods. All calculations and logic are intended for an Excel-based implementation.

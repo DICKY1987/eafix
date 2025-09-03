@@ -1,0 +1,557 @@
+
+ eco cal to signal SYSTEM ARCHITECTURE OVERVIEW
+1. DATA ACQUISITION LAYER
+Import Scheduler → Downloads Monitor → File Validator → Raw Data Storage
+    ↓
+- Sunday 12 PM start trigger
+- Hourly retry mechanism  
+- Multiple file name patterns
+- File freshness validation
+- Manual override capability
+2. DATA TRANSFORMATION PIPELINE
+Raw CSV → Filter → Standardize → Enhance → Sort → Display
+    ↓
+- Impact filtering (High/Medium only)
+- Date/time normalization
+- Currency standardization
+- Event categorization
+- Structure validation
+3. EVENT ENHANCEMENT ENGINE
+Original Events → Anticipation Generator → Equity Markets → Chronological Merger
+    ↓
+- User-defined anticipation hours (default: 2 hours before)
+- User-defined anticipation count (default: 3 events)
+- Global market opening injection
+- Time-based sorting algorithm
+4. STRATEGY EXECUTION FRAMEWORK
+Event Trigger → Performance Calculator → Parameter Selector → Signal Generator
+    ↓
+- Time offset monitoring (-3 minutes default)
+- Performance oscillator (0-100 scale)
+- Strategy ID assignment
+- Parameter set selection
+- Signal sheet integration
+KEY LOGICAL COMPONENTS
+Configuration Management
+
+Anticipation Settings: Hours before (2), Number of rows (3)
+Time Offsets: Trigger timing (-3 minutes)
+Performance Periods: Calculation window (30 days)
+Strategy Mappings: Event type → Strategy ID
+User Controls: Update buttons, manual overrides
+
+Event Type Hierarchy
+
+Economic Events (from imported data)
+
+High Impact: NFP, Central Bank decisions, CPI
+Medium Impact: PMI, Employment data, Retail sales
+
+
+Anticipation Events (system generated)
+
+"2 hours before NFP anticipation, High impact, High impact"
+"1 hour before ECB decision anticipation, High impact, High impact"
+Dynamic naming based on original event
+
+
+Equity Market Events (system injected)
+
+Tokyo open (USD/JPY 21:00 CST)
+London open (EUR/USD 02:00 CST)
+New York open (USD/*** 08:30 CST)
+Currency pair associations
+
+
+
+Performance Oscillator Logic
+Strategy Performance → 0-100 Value → Parameter Set Selection
+    ↓
+0-25: Conservative parameters (low risk)
+26-50: Moderate parameters (medium risk)
+51-75: Aggressive parameters (higher risk)
+76-100: Maximum parameters (highest risk)
+Data Flow Architecture
+Downloads Folder
+    ↓ (Automated/Manual Import)
+Raw Calendar Data Sheet
+    ↓ (Transformation)
+Processed Events Array
+    ↓ (Enhancement)
+Enhanced Events Array (with anticipation + equity)
+    ↓ (Chronological Sort)
+Final Calendar Display
+    ↓ (Real-time Monitoring)
+Strategy Execution Engine
+    ↓ (Signal Generation)
+Signal Entry Sheet
+    ↓ (MT4 Transfer)
+Trade Execution
+USER INTERACTION POINTS
+Configuration Controls
+
+Anticipation hours slider/input
+Anticipation rows counter
+Time offset adjustment
+Performance period setting
+Manual import trigger
+Calendar refresh button
+
+Real-time Monitoring
+
+Import status display
+Next import time
+Event countdown timers
+Strategy execution status
+Performance oscillator value
+Active event highlighting
+
+CRITICAL SYSTEM REQUIREMENTS
+Data Integrity
+
+Duplicate event detection
+Time zone standardization
+Date validation
+Impact level verification
+Currency code validation
+
+Performance Optimization
+
+Efficient array operations
+Minimal Excel recalculation
+Background processing
+Error recovery mechanisms
+Memory management
+
+Integration Points
+
+Signal Entry Sheet connection
+MT4 data path coordination
+Error logging system
+Configuration persistence
+Strategy parameter management
+
+Would you like me to dive deeper into any specific component of this logical structure?RetryDdive deeper into all components of this logical structure process and logic must be exact.this is what i came up with:🔁 1. Automated Calendar Import & Refresh
+FeatureDescriptionStart TimeEvery Sunday at 12:00 PM CSTRetry LogicReattempt import every hour until a new calendar is detectedSourceCalendar CSV or Excel from Downloads folder (e.g., ForexFactory, Investing.com)
+🔄 2. Raw → Structured Calendar Transformation
+StepDescriptionFilter LogicOnly keep High (Red) and Medium (Orange) impact eventsSort OrderEvents are sorted chronologically (including added rows below)Equity Market EventsAppend known equity market open times (e.g., London, NY, Tokyo) as new rows with their own tags (e.g., EQT-OPEN, EQT-CLOSE)Anticipation RowsFor each retained event, generate additional rows (explained below)Storage FormatTransformed data replaces or populates a new sheet/database table
+⏳ 3. Anticipation Row Logic
+AttributeDescriptionRow Format"#{Hours}H Before {Event Name} Anticipation - {Currency} - {Impact}"Impact TagReuses originating event’s impact (e.g., EMO-A, EMO-E)CustomizableUser specifies how many anticipation times (e.g., 1h, 4h) via a UI (button-driven)Effect on SystemTreated like full eco-events by strategy trigger engine
+⏱ 4. Offset-Based Trade Signal Triggering
+ConditionDescriptionTrigger TimeBased on event time - offset (e.g., 10:00 - 3 min → 09:57 CST)Offset ConfigConfigurable per event or globally; value in minutes (positive or negative)Trigger TypeCan be Anticipation, EMO-A, EMO-E, or EQTEffectTriggers strategy ID call & sends trade instructions to SignalEntrySheet
+🧠 5. Strategy ID → Parameter Resolution
+StageDescriptionStrategy MappingEach trigger type maps to a specific strategy ID (via lookup table)Performance LogicA 0–100 oscillator value is computed (based on historical performance)Range-Based Param SelectionOscillator range (e.g., 0–20, 21–40...) determines which parameter set is selectedFinal OutputResulting parameters sent to SignalEntrySheet for trade execution in MT4
+📑 6. Chronological Ordering (Final Output)
+LogicDescriptionFinal StructureAfter transformation and row generation, all rows are re-sorted by timeMix of RowsResult includes: economic events, anticipation trades, equity opensUnified TimelineThis forms the final master time-based event queue used by the system
+✅ 7. Optional Features to Add
+* Manual Override UI: Add/remove anticipation levels dynamically via sheet buttons
+* Event Tag Filtering: Allow toggling EMO-A, EMO-E, or EQT events individually
+* Conflict Detection: Detect overlapping events to avoid signal conflicts
+* Visualization Panel: On-chart calendar preview or Excel chart for event densityEditDissected economic calendar system's intricate workflow and logic.3sThe user has provided a detailed flowchart and breakdown of their economic calendar system. They want me to dive deeper into all components of the logical structure with exact process and logic. Let me analyze their flowchart and breakdown to understand the complete system architecture.
+Looking at the flowchart:
+
+START
+Import Calendar (CSV/Excel)
+Filter by Impact → Add Equity Market Events → User-Specified Offset
+Assign Dates to Weekly Events ← Assign Dates to Weekly Events
+Chronologically Sort (with User-Specified Offset feeding into this)
+Chronologically Sort (seems to be duplicated)
+Generate Oscillator Value → SEND TO Signal Entry Sheet
+
+And their detailed breakdown covers:
+
+Automated Calendar Import & Refresh
+Raw → Structured Calendar Transformation
+Anticipation Row Logic
+Offset-Based Trade Signal Triggering
+Strategy ID → Parameter Resolution
+Chronological Ordering (Final Output)
+Optional Features to Add
+
+I need to dive deeper into each component with exact logic and processes. Let me structure this comprehensively.Excellent breakdown! Let me dive deeper into each component with exact logic and processes:
+🔁 1. AUTOMATED CALENDAR IMPORT & REFRESH SYSTEM
+Import Scheduler Logic
+IF (Current_Day = Sunday AND Current_Time >= 12:00 PM CST) THEN
+    Start_Import_Attempts()
+ELSE
+    Calculate_Next_Sunday_12PM()
+    Schedule_Import_Timer()
+END IF
+
+FUNCTION Start_Import_Attempts():
+    WHILE (New_Calendar_Not_Detected) DO
+        Attempt_Import()
+        IF (Import_Success) THEN
+            BREAK
+        ELSE
+            Wait(1_Hour)
+        END IF
+    END WHILE
+File Detection Algorithm
+SEARCH_PATTERNS = [
+    "economic_calendar*.csv",
+    "calendar*.csv", 
+    "forex_calendar*.csv",
+    "events*.csv",
+    "*calendar*.xlsx"
+]
+
+FOR each pattern IN SEARCH_PATTERNS:
+    files = Find_Files_In_Downloads(pattern)
+    FOR each file IN files:
+        IF (File_Modified_Date = Today AND File_Size > 1KB) THEN
+            RETURN Attempt_Import(file)
+        END IF
+    END FOR
+END FOR
+New Calendar Detection Logic
+FUNCTION Is_New_Calendar(file_path):
+    current_hash = Calculate_MD5(file_path)
+    stored_hash = Get_Last_Import_Hash()
+    
+    IF (current_hash != stored_hash) THEN
+        Store_New_Hash(current_hash)
+        RETURN TRUE
+    ELSE
+        RETURN FALSE
+    END IF
+🔄 2. RAW → STRUCTURED CALENDAR TRANSFORMATION
+Impact Filter Exact Logic
+FUNCTION Filter_By_Impact(raw_events):
+    filtered_events = []
+    
+    FOR each event IN raw_events:
+        impact_value = Normalize_Impact(event.impact)
+        
+        IF (impact_value = "HIGH" OR impact_value = "MEDIUM") THEN
+            event.impact_code = Map_Impact_Code(impact_value)
+            filtered_events.ADD(event)
+        END IF
+    END FOR
+    
+    RETURN filtered_events
+
+FUNCTION Map_Impact_Code(impact):
+    SWITCH impact:
+        CASE "HIGH": RETURN "EMO-E" (Economic Major - Extreme)
+        CASE "MEDIUM": RETURN "EMO-A" (Economic Major - Average)
+    END SWITCH
+Weekly Event Assignment Logic
+FUNCTION Assign_Weekly_Dates(filtered_events):
+    weekly_events = []
+    current_week_start = Get_Current_Week_Monday()
+    
+    FOR each event IN filtered_events:
+        IF (event.frequency = "WEEKLY") THEN
+            FOR day_offset = 0 TO 6:  // Monday to Sunday
+                new_event = Clone_Event(event)
+                new_event.date = current_week_start + day_offset
+                new_event.event_id = Generate_Weekly_ID(event, day_offset)
+                weekly_events.ADD(new_event)
+            END FOR
+        ELSE
+            weekly_events.ADD(event)  // Keep as-is for specific dates
+        END IF
+    END FOR
+    
+    RETURN weekly_events
+Equity Market Events Injection
+EQUITY_MARKETS = [
+    {name: "Tokyo Open", time: "21:00 CST", currencies: ["USD/JPY", "AUD/JPY"], impact: "EMO-A"},
+    {name: "London Open", time: "02:00 CST", currencies: ["EUR/USD", "GBP/USD"], impact: "EMO-E"},
+    {name: "New York Open", time: "08:30 CST", currencies: ["USD/***"], impact: "EMO-U"},
+    {name: "Sydney Open", time: "16:00 CST", currencies: ["AUD/USD", "NZD/USD"], impact: "EMO-A"}
+]
+
+FUNCTION Add_Equity_Market_Events(events_array):
+    FOR each market IN EQUITY_MARKETS:
+        FOR each weekday IN [Monday, Tuesday, Wednesday, Thursday, Friday]:
+            equity_event = {
+                date: Get_Next_Weekday(weekday),
+                time: market.time,
+                event_name: market.name,
+                impact: market.impact,
+                event_type: "EQT-OPEN",
+                currencies: market.currencies,
+                strategy_id: Get_Equity_Strategy_ID(market.name)
+            }
+            events_array.ADD(equity_event)
+        END FOR
+    END FOR
+    
+    RETURN events_array
+⏳ 3. ANTICIPATION ROW LOGIC (EXACT ALGORITHM)
+Anticipation Row Generation
+USER_CONFIG = {
+    anticipation_hours: [1, 2, 4],  // User customizable
+    max_anticipation_rows: 3,       // User customizable
+    anticipation_enabled: true
+}
+
+FUNCTION Generate_Anticipation_Rows(original_event):
+    anticipation_rows = []
+    
+    FOR each hour_offset IN USER_CONFIG.anticipation_hours:
+        anticipation_event = {
+            date: original_event.date,
+            time: original_event.time - (hour_offset * 60_minutes),
+            event_name: Format_Anticipation_Name(hour_offset, original_event),
+            impact: original_event.impact,  // Inherit from original
+            event_type: "ANTICIPATION",
+            original_event_id: original_event.id,
+            hours_before: hour_offset,
+            strategy_id: Get_Anticipation_Strategy_ID(original_event.impact, hour_offset)
+        }
+        anticipation_rows.ADD(anticipation_event)
+    END FOR
+    
+    RETURN anticipation_rows
+
+FUNCTION Format_Anticipation_Name(hours, original_event):
+    RETURN "#{hours}H Before {original_event.name} Anticipation - {original_event.currency} - {original_event.impact}"
+    
+    // Example: "#2H Before NFP Anticipation - USD - EMO-E"
+Dynamic Anticipation Update Logic
+FUNCTION Update_Anticipation_Config(new_hours_array, new_max_rows):
+    // Called when user clicks "Update Anticipation Events" button
+    
+    USER_CONFIG.anticipation_hours = new_hours_array
+    USER_CONFIG.max_anticipation_rows = new_max_rows
+    
+    // Regenerate entire calendar with new settings
+    Regenerate_Complete_Calendar()
+    
+    // Update UI to show changes
+    Refresh_Calendar_Display()
+⏱ 4. OFFSET-BASED TRADE SIGNAL TRIGGERING (EXACT TIMING)
+Real-Time Monitoring Engine
+FUNCTION Monitor_Event_Triggers():
+    WHILE (System_Active) DO
+        current_time = Get_Current_Time_CST()
+        
+        FOR each event IN active_calendar:
+            trigger_time = event.time - event.offset_minutes
+            
+            IF (ABS(current_time - trigger_time) <= 30_seconds) THEN
+                Execute_Strategy_Trigger(event)
+                Mark_Event_As_Triggered(event)
+            END IF
+        END FOR
+        
+        Sleep(15_seconds)  // Check every 15 seconds for precision
+    END WHILE
+Offset Configuration Logic
+OFFSET_RULES = {
+    "EMO-E": -3_minutes,     // High impact events
+    "EMO-A": -2_minutes,     // Medium impact events
+    "EQT-OPEN": -5_minutes,  // Equity market opens
+    "ANTICIPATION": -1_minute // Anticipation events
+}
+
+FUNCTION Calculate_Trigger_Time(event):
+    base_offset = OFFSET_RULES[event.event_type]
+    user_adjustment = Get_User_Offset_Adjustment()
+    
+    final_offset = base_offset + user_adjustment
+    trigger_time = event.time + (final_offset * 60_seconds)
+    
+    RETURN trigger_time
+Strategy Trigger Execution
+FUNCTION Execute_Strategy_Trigger(event):
+    strategy_id = event.strategy_id
+    oscillator_value = Calculate_Performance_Oscillator(strategy_id)
+    parameter_set = Select_Parameter_Set(oscillator_value)
+    
+    signal_data = {
+        symbol: Determine_Currency_Pair(event),
+        strategy_id: strategy_id,
+        parameters: parameter_set,
+        trigger_reason: event.event_type,
+        event_name: event.event_name,
+        execution_time: Get_Current_Time()
+    }
+    
+    Send_To_Signal_Entry_Sheet(signal_data)
+    Log_Strategy_Execution(event, signal_data)
+🧠 5. STRATEGY ID → PARAMETER RESOLUTION (EXACT ALGORITHM)
+Strategy Mapping Table
+STRATEGY_MAPPING = {
+    "NFP": {base_strategy: 101, anticipation_strategy: 201},
+    "FOMC": {base_strategy: 102, anticipation_strategy: 202},
+    "ECB_DECISION": {base_strategy: 103, anticipation_strategy: 203},
+    "BOE_DECISION": {base_strategy: 104, anticipation_strategy: 204},
+    "TOKYO_OPEN": {base_strategy: 301, anticipation_strategy: 401},
+    "LONDON_OPEN": {base_strategy: 302, anticipation_strategy: 402},
+    "NY_OPEN": {base_strategy: 303, anticipation_strategy: 403}
+}
+
+FUNCTION Get_Strategy_ID(event):
+    event_key = Normalize_Event_Name(event.event_name)
+    
+    IF (event.event_type = "ANTICIPATION") THEN
+        RETURN STRATEGY_MAPPING[event_key].anticipation_strategy
+    ELSE
+        RETURN STRATEGY_MAPPING[event_key].base_strategy
+    END IF
+Performance Oscillator Calculation
+FUNCTION Calculate_Performance_Oscillator(strategy_id):
+    performance_period = Get_Performance_Period_Days()  // Default: 30 days
+    historical_trades = Get_Historical_Trades(strategy_id, performance_period)
+    
+    IF (historical_trades.count = 0) THEN
+        RETURN 50  // Neutral starting point
+    END IF
+    
+    // Calculate key performance metrics
+    win_rate = Calculate_Win_Rate(historical_trades)
+    profit_factor = Calculate_Profit_Factor(historical_trades)
+    max_drawdown = Calculate_Max_Drawdown(historical_trades)
+    avg_trade_duration = Calculate_Avg_Duration(historical_trades)
+    
+    // Weighted scoring algorithm
+    score = (win_rate * 0.3) + (profit_factor * 0.4) + ((1 - max_drawdown) * 0.2) + (efficiency_factor * 0.1)
+    
+    // Normalize to 0-100 scale
+    oscillator_value = ROUND(score * 100, 0)
+    
+    RETURN CLAMP(oscillator_value, 0, 100)
+Parameter Set Selection Logic
+PARAMETER_RANGES = {
+    "CONSERVATIVE": {range: [0, 25], risk_level: "LOW"},
+    "MODERATE": {range: [26, 50], risk_level: "MEDIUM"},
+    "AGGRESSIVE": {range: [51, 75], risk_level: "HIGH"},
+    "MAXIMUM": {range: [76, 100], risk_level: "EXTREME"}
+}
+
+FUNCTION Select_Parameter_Set(oscillator_value):
+    FOR each range_name, range_data IN PARAMETER_RANGES:
+        IF (oscillator_value >= range_data.range[0] AND oscillator_value <= range_data.range[1]) THEN
+            RETURN Load_Parameter_Set(range_name)
+        END IF
+    END FOR
+
+FUNCTION Load_Parameter_Set(range_name):
+    // Load specific trading parameters based on performance range
+    PARAMETER_SETS = {
+        "CONSERVATIVE": {
+            lot_size: 0.01,
+            stop_loss: 20,
+            take_profit: 40,
+            max_spread: 2,
+            buy_distance: 5,
+            sell_distance: 5
+        },
+        "MODERATE": {
+            lot_size: 0.02,
+            stop_loss: 15,
+            take_profit: 30,
+            max_spread: 3,
+            buy_distance: 10,
+            sell_distance: 10
+        },
+        "AGGRESSIVE": {
+            lot_size: 0.05,
+            stop_loss: 10,
+            take_profit: 20,
+            max_spread: 4,
+            buy_distance: 15,
+            sell_distance: 15
+        },
+        "MAXIMUM": {
+            lot_size: 0.10,
+            stop_loss: 5,
+            take_profit: 10,
+            max_spread: 5,
+            buy_distance: 20,
+            sell_distance: 20
+        }
+    }
+    
+    RETURN PARAMETER_SETS[range_name]
+📑 6. CHRONOLOGICAL ORDERING (EXACT SORT ALGORITHM)
+Multi-Criteria Sorting Logic
+FUNCTION Chronologically_Sort_Events(all_events):
+    // Primary sort: Date + Time
+    // Secondary sort: Event priority
+    // Tertiary sort: Event type hierarchy
+    
+    SORT all_events BY:
+        1. event.date ASC
+        2. event.time ASC  
+        3. event.priority DESC  // EMO-E > EMO-A > EQT-OPEN > ANTICIPATION
+        4. event.event_type ASC // Consistent ordering for same-time events
+    
+    RETURN all_events
+Event Priority Hierarchy
+EVENT_PRIORITIES = {
+    "EMO-E": 100,        // Highest priority
+    "EMO-A": 80,
+    "EQT-OPEN": 60,
+    "EQT-CLOSE": 50,
+    "ANTICIPATION": 20   // Lowest priority
+}
+
+FUNCTION Assign_Event_Priorities(events):
+    FOR each event IN events:
+        event.priority = EVENT_PRIORITIES[event.impact] OR 0
+    END FOR
+    
+    RETURN events
+Conflict Resolution Logic
+FUNCTION Resolve_Time_Conflicts(sorted_events):
+    FOR i = 0 TO sorted_events.length - 2:
+        current_event = sorted_events[i]
+        next_event = sorted_events[i + 1]
+        
+        time_difference = ABS(next_event.time - current_event.time)
+        
+        IF (time_difference < 5_minutes) THEN
+            // Events too close together
+            IF (current_event.priority > next_event.priority) THEN
+                next_event.time = current_event.time + 5_minutes
+                Log_Conflict_Resolution(current_event, next_event)
+            ELSE
+                current_event.time = next_event.time - 5_minutes
+                Log_Conflict_Resolution(next_event, current_event)
+            END IF
+        END IF
+    END FOR
+    
+    RETURN Re_Sort_Events(sorted_events)
+🎯 7. SIGNAL ENTRY SHEET INTEGRATION (EXACT DATA TRANSFER)
+Signal Data Formatting
+FUNCTION Send_To_Signal_Entry_Sheet(signal_data):
+    signal_row = {
+        symbol: signal_data.symbol,
+        buy_distance: signal_data.parameters.buy_distance,
+        sell_distance: signal_data.parameters.sell_distance,
+        stop_loss: signal_data.parameters.stop_loss,
+        take_profit: signal_data.parameters.take_profit,
+        lot_size: signal_data.parameters.lot_size,
+        expire_hours: 24,  // Default
+        trailing_stop: 0,  // Default off
+        comment: Format_Signal_Comment(signal_data),
+        strategy_id: signal_data.strategy_id,
+        pset_id: Calculate_PSet_ID(signal_data)
+    }
+    
+    Write_To_Signal_Entry_Row(signal_row)
+    Trigger_Signal_Validation()
+Real-Time Feedback Loop
+FUNCTION Monitor_Signal_Results():
+    WHILE (signals_pending) DO
+        FOR each pending_signal IN pending_signals:
+            result = Check_MT4_Execution_Result(pending_signal.id)
+            
+            IF (result.status = "EXECUTED") THEN
+                Update_Performance_History(pending_signal, result)
+                pending_signals.REMOVE(pending_signal)
+            ELSIF (result.status = "FAILED") THEN
+                Log_Execution_Failure(pending_signal, result)
+                pending_signals.REMOVE(pending_signal)
+            END IF
+        END FOR
+        
+        Sleep(5_seconds)
+    END WHILE
+This exact logical structure ensures precise timing, comprehensive event handling, and seamless integration with your existing MT4-Excel-Python system.

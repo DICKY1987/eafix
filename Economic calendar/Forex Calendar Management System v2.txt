@@ -1,0 +1,1816 @@
+'=========================================================================
+' Forex Calendar Management System v2.0
+' Advanced system for managing and exporting forex calendar data to MQL4
+'=========================================================================
+Option Explicit
+
+'=========================================================================
+' CONFIGURATION MODULE - Settings Management
+'=========================================================================
+
+' Create or ensure settings sheet exists
+Private Sub EnsureSettingsSheet()
+    Dim ws As Worksheet
+    On Error Resume Next
+    Set ws = ThisWorkbook.Sheets("Settings")
+    On Error GoTo 0
+    
+    If ws Is Nothing Then
+        Application.DisplayAlerts = False
+        Set ws = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+        ws.Name = "Settings"
+        Application.DisplayAlerts = True
+        
+        ' Add settings fields
+        ws.Range("A1").Value = "Setting"
+        ws.Range("B1").Value = "Value"
+        ws.Range("C1").Value = "Description"
+        
+        ' Add default values
+        Dim rowNum As Integer: rowNum = 2
+        
+        ws.Cells(rowNum, 1).Value = "DownloadsPath"
+        ws.Cells(rowNum, 2).Value = "C:\Users\" & Environ("USERNAME") & "\Downloads\"
+        ws.Cells(rowNum, 3).Value = "Path where calendar CSV files are downloaded"
+        rowNum = rowNum + 1
+        
+        ws.Cells(rowNum, 1).Value = "MQL4Path"
+        ws.Cells(rowNum, 2).Value = FindMetaTraderPath()
+        ws.Cells(rowNum, 3).Value = "Path to MQL4 Files directory"
+        rowNum = rowNum + 1
+        
+        ws.Cells(rowNum, 1).Value = "DefaultTrailingType"
+        ws.Cells(rowNum, 2).Value = "none"
+        ws.Cells(rowNum, 3).Value = "Default trailing stop type (none, step, breakeven, percent)"
+        rowNum = rowNum + 1
+        
+        ws.Cells(rowNum, 1).Value = "DefaultRiskPercent"
+        ws.Cells(rowNum, 2).Value = "1"
+        ws.Cells(rowNum, 3).Value = "Default risk percentage for position sizing"
+        rowNum = rowNum + 1
+        
+        ws.Cells(rowNum, 1).Value = "DefaultSLPips"
+        ws.Cells(rowNum, 2).Value = "20"
+        ws.Cells(rowNum, 3).Value = "Default stop loss in pips"
+        rowNum = rowNum + 1
+        
+        ws.Cells(rowNum, 1).Value = "DefaultTPPips"
+        ws.Cells(rowNum, 2).Value = "40"
+        ws.Cells(rowNum, 3).Value = "Default take profit in pips"
+        rowNum = rowNum + 1
+        
+        ws.Cells(rowNum, 1).Value = "DefaultBufferPips"
+        ws.Cells(rowNum, 2).Value = "5"
+        ws.Cells(rowNum, 3).Value = "Default distance from price in pips for pending orders"
+        rowNum = rowNum + 1
+        
+        ws.Cells(rowNum, 1).Value = "CalendarSources"
+        ws.Cells(rowNum, 2).Value = "ForexFactory,Investing,DailyFX"
+        ws.Cells(rowNum, 3).Value = "Supported calendar sources (comma-separated)"
+        rowNum = rowNum + 1
+        
+        ws.Cells(rowNum, 1).Value = "AutoBackup"
+        ws.Cells(rowNum, 2).Value = "TRUE"
+        ws.Cells(rowNum, 3).Value = "Create automatic backups before operations"
+        rowNum = rowNum + 1
+        
+        ws.Cells(rowNum, 1).Value = "LoggingEnabled"
+        ws.Cells(rowNum, 2).Value = "TRUE"
+        ws.Cells(rowNum, 3).Value = "Enable detailed operation logging"
+        rowNum = rowNum + 1
+        
+        ws.Cells(rowNum, 1).Value = "BackupFolder"
+        ws.Cells(rowNum, 2).Value = ThisWorkbook.Path & "\Backups\"
+        ws.Cells(rowNum, 3).Value = "Where to store backup files"
+        rowNum = rowNum + 1
+        
+        ws.Cells(rowNum, 1).Value = "LogFolder"
+        ws.Cells(rowNum, 2).Value = ThisWorkbook.Path & "\Logs\"
+        ws.Cells(rowNum, 3).Value = "Where to store log files"
+        
+        ' Format settings sheet
+        ws.Range("A1:C1").Font.Bold = True
+        ws.Columns("A:C").AutoFit
+        ws.Rows("1:1").Interior.Color = RGB(200, 200, 200)
+        ws.Range("A1:C" & rowNum).Borders.LineStyle = xlContinuous
+    End If
+End Sub
+
+' Get a setting value with fallback
+Public Function GetSetting(settingName As String, Optional defaultValue As Variant = "") As Variant
+    EnsureSettingsSheet
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Settings")
+    
+    Dim settingRow As Range
+    On Error Resume Next
+    Set settingRow = ws.Columns(1).Find(What:=settingName, LookIn:=xlValues, LookAt:=xlWhole)
+    On Error GoTo 0
+    
+    If settingRow Is Nothing Then
+        LogEvent "Warning: Setting not found: " & settingName, "GetSetting"
+        GetSetting = defaultValue
+    Else
+        GetSetting = ws.Cells(settingRow.Row, 2).Value
+        If GetSetting = "" Then GetSetting = defaultValue
+    End If
+End Function
+
+' Save a setting value
+Public Sub SaveSetting(settingName As String, settingValue As Variant)
+    EnsureSettingsSheet
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Settings")
+    
+    Dim settingRow As Range
+    On Error Resume Next
+    Set settingRow = ws.Columns(1).Find(What:=settingName, LookIn:=xlValues, LookAt:=xlWhole)
+    On Error GoTo 0
+    
+    If settingRow Is Nothing Then
+        ' Add new setting at the end
+        Dim lastRow As Long
+        lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row + 1
+        ws.Cells(lastRow, 1).Value = settingName
+        ws.Cells(lastRow, 2).Value = settingValue
+        ws.Cells(lastRow, 3).Value = "Added on " & Format(Now, "yyyy-mm-dd hh:mm:ss")
+    Else
+        ' Update existing setting
+        ws.Cells(settingRow.Row, 2).Value = settingValue
+    End If
+    LogEvent "Setting saved: " & settingName & " = " & CStr(settingValue), "SaveSetting"
+End Sub
+
+' Show settings form to edit configuration
+Public Sub ShowSettingsForm()
+    EnsureSettingsSheet
+    
+    ' Create a simple form for settings - this could be replaced with a proper UserForm
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Settings")
+    
+    ' Make settings visible temporarily
+    Dim originalVisibility As XlSheetVisibility
+    originalVisibility = ws.Visible
+    ws.Visible = xlSheetVisible
+    ws.Activate
+    
+    MsgBox "Please edit the settings in column B and press OK when finished.", vbInformation, "Settings"
+    
+    ' Restore original visibility
+    ws.Visible = originalVisibility
+    
+    ' Return to the main sheet
+    If ThisWorkbook.Sheets("Calendar") Is Nothing Then
+        ThisWorkbook.Sheets(1).Activate
+    Else
+        ThisWorkbook.Sheets("Calendar").Activate
+    End If
+End Sub
+
+'=========================================================================
+' UTILITY FUNCTIONS
+'=========================================================================
+
+' Find MetaTrader installation path automatically
+Private Function FindMetaTraderPath() As String
+    Dim possiblePaths As Variant
+    Dim i As Integer
+    Dim path As String
+    
+    ' Common installation paths to check
+    possiblePaths = Array( _
+        "C:\Program Files\MetaTrader 4\MQL4\Files\", _
+        "C:\Program Files (x86)\MetaTrader 4\MQL4\Files\", _
+        "C:\Program Files\MetaTrader 5\MQL4\Files\", _
+        "C:\Program Files (x86)\MetaTrader 5\MQL4\Files\", _
+        "C:\Program Files\IC Markets MetaTrader 4\MQL4\Files\", _
+        "C:\Program Files (x86)\IC Markets MetaTrader 4\MQL4\Files\" _
+    )
+    
+    ' Check each path
+    For i = LBound(possiblePaths) To UBound(possiblePaths)
+        path = possiblePaths(i)
+        If DirExists(path) Then
+            FindMetaTraderPath = path
+            Exit Function
+        End If
+    Next i
+    
+    ' Default if not found
+    FindMetaTraderPath = "C:\Program Files (x86)\MetaTrader 4\MQL4\Files\"
+End Function
+
+' Check if directory exists
+Private Function DirExists(folderPath As String) As Boolean
+    On Error Resume Next
+    DirExists = ((GetAttr(folderPath) And vbDirectory) = vbDirectory)
+    On Error GoTo 0
+End Function
+
+' Create directory if it doesn't exist
+Private Sub EnsureDirectoryExists(folderPath As String)
+    Dim parts As Variant
+    Dim buildPath As String
+    Dim i As Integer
+    
+    If Right(folderPath, 1) = "\" Then
+        folderPath = Left(folderPath, Len(folderPath) - 1)
+    End If
+    
+    If DirExists(folderPath) Then Exit Sub
+    
+    parts = Split(folderPath, "\")
+    buildPath = parts(0) & "\"
+    
+    For i = 1 To UBound(parts)
+        buildPath = buildPath & parts(i) & "\"
+        If Not DirExists(buildPath) Then
+            MkDir buildPath
+        End If
+    Next i
+End Sub
+
+' Logging system
+Public Sub LogEvent(message As String, Optional source As String = "", Optional logLevel As String = "INFO")
+    If GetSetting("LoggingEnabled", True) = False Then Exit Sub
+    
+    Dim logFolder As String
+    logFolder = GetSetting("LogFolder", ThisWorkbook.Path & "\Logs\")
+    EnsureDirectoryExists logFolder
+    
+    Dim logFile As String
+    logFile = logFolder & "CalendarManager_" & Format(Date, "yyyymmdd") & ".log"
+    
+    Dim fileNum As Integer
+    fileNum = FreeFile
+    
+    On Error Resume Next
+    Open logFile For Append As #fileNum
+    Print #fileNum, Format(Now, "yyyy-mm-dd hh:mm:ss") & " [" & logLevel & "] " & IIf(source <> "", "[" & source & "] ", "") & message
+    Close #fileNum
+    On Error GoTo 0
+End Sub
+
+' Create backup of current calendar
+Public Sub CreateBackup(Optional reason As String = "Manual")
+    If GetSetting("AutoBackup", True) = False Then Exit Sub
+    
+    Dim ws As Worksheet
+    On Error Resume Next
+    Set ws = ThisWorkbook.Sheets("Calendar")
+    On Error GoTo 0
+    
+    If ws Is Nothing Then
+        LogEvent "No Calendar sheet to backup", "CreateBackup", "WARNING"
+        Exit Sub
+    End If
+    
+    Dim backupFolder As String
+    backupFolder = GetSetting("BackupFolder", ThisWorkbook.Path & "\Backups\")
+    EnsureDirectoryExists backupFolder
+    
+    Dim backupName As String
+    backupName = backupFolder & "CalendarBackup_" & Format(Now, "yyyymmdd_hhmmss") & "_" & reason & ".xlsx"
+    
+    On Error Resume Next
+    ws.Copy
+    ActiveWorkbook.SaveAs backupName, xlOpenXMLWorkbook
+    ActiveWorkbook.Close False
+    On Error GoTo 0
+    
+    LogEvent "Calendar backup created: " & backupName, "CreateBackup"
+End Sub
+
+' Show progress bar
+Private Sub ShowProgress(title As String, current As Long, total As Long)
+    Application.StatusBar = title & ": " & current & " of " & total & " (" & Format(current / total, "0%") & ")"
+    DoEvents
+End Sub
+
+' Reset progress bar
+Private Sub ResetProgress()
+    Application.StatusBar = False
+End Sub
+
+'=========================================================================
+' CALENDAR LOADING AND MANAGEMENT
+'=========================================================================
+
+' Load the latest calendar file
+Public Sub LoadAndPrepareCalendar()
+    On Error GoTo ErrorHandler
+    
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    Application.Calculation = xlCalculationManual
+    
+    LogEvent "Starting LoadAndPrepareCalendar", "LoadAndPrepareCalendar"
+    
+    ' Get configured paths
+    Dim downloadsPath As String
+    downloadsPath = GetSetting("DownloadsPath", "C:\Users\" & Environ("USERNAME") & "\Downloads\")
+    
+    ' Validate path exists
+    If Not DirExists(downloadsPath) Then
+        MsgBox "Downloads folder not found: " & downloadsPath & vbCrLf & _
+               "Please update the path in Settings.", vbExclamation, "Error"
+        GoTo CleanExit
+    End If
+    
+    ' Get sources and prepare patterns to search for
+    Dim sources As String
+    sources = GetSetting("CalendarSources", "ForexFactory,Investing,DailyFX")
+    
+    Dim sourcePatterns As Object
+    Set sourcePatterns = CreateObject("Scripting.Dictionary")
+    
+    If InStr(sources, "ForexFactory") > 0 Then
+        sourcePatterns.Add "ForexFactory", "ff_calendar_thisweek*.csv"
+    End If
+    
+    If InStr(sources, "Investing") > 0 Then
+        sourcePatterns.Add "Investing", "investing_calendar_*.csv"
+    End If
+    
+    If InStr(sources, "DailyFX") > 0 Then
+        sourcePatterns.Add "DailyFX", "dailyfx_calendar_*.csv"
+    End If
+    
+    ' Find latest files
+    Dim latestFiles As Object
+    Set latestFiles = CreateObject("Scripting.Dictionary")
+    Dim latestDates As Object
+    Set latestDates = CreateObject("Scripting.Dictionary")
+    
+    Dim source As Variant
+    Dim pattern As String
+    Dim fileName As String
+    Dim fileDate As Date
+    
+    ' First initialize dates to very old date
+    For Each source In sourcePatterns.Keys
+        latestDates.Add source, DateSerial(1900, 1, 1)
+        latestFiles.Add source, ""
+    Next source
+    
+    ' Find latest file for each source
+    For Each source In sourcePatterns.Keys
+        pattern = sourcePatterns(source)
+        fileName = Dir(downloadsPath & pattern)
+        
+        Do While fileName <> ""
+            fileDate = FileDateTime(downloadsPath & fileName)
+            If fileDate > latestDates(source) Then
+                latestDates(source) = fileDate
+                latestFiles(source) = fileName
+            End If
+            fileName = Dir
+        Loop
+    Next source
+    
+    ' Check if any files were found
+    Dim foundAny As Boolean
+    foundAny = False
+    
+    For Each source In latestFiles.Keys
+        If latestFiles(source) <> "" Then
+            foundAny = True
+            Exit For
+        End If
+    Next source
+    
+    If Not foundAny Then
+        MsgBox "No calendar CSV files found in " & downloadsPath & vbCrLf & _
+               "Please download calendar files first.", vbExclamation, "No Files Found"
+        GoTo CleanExit
+    End If
+    
+    ' Let user choose which source to use if multiple are available
+    Dim selectedSource As String
+    Dim availableSources As String
+    Dim sourceCount As Integer
+    
+    availableSources = ""
+    sourceCount = 0
+    
+    For Each source In latestFiles.Keys
+        If latestFiles(source) <> "" Then
+            availableSources = availableSources & IIf(availableSources <> "", ", ", "") & source
+            sourceCount = sourceCount + 1
+        End If
+    Next source
+    
+    If sourceCount > 1 Then
+        selectedSource = InputBox("Multiple calendar sources found. Please select one:" & vbCrLf & _
+                                  availableSources, "Select Calendar Source", sourcePatterns.Keys(0))
+        
+        If selectedSource = "" Then
+            MsgBox "Operation cancelled by user.", vbInformation, "Cancelled"
+            GoTo CleanExit
+        End If
+        
+        If latestFiles.Exists(selectedSource) = False Then
+            MsgBox "Invalid source selected. Please try again.", vbExclamation, "Error"
+            GoTo CleanExit
+        End If
+    ElseIf sourceCount = 1 Then
+        For Each source In latestFiles.Keys
+            If latestFiles(source) <> "" Then
+                selectedSource = source
+                Exit For
+            End If
+        Next source
+    Else
+        MsgBox "No valid calendar files found.", vbExclamation, "Error"
+        GoTo CleanExit
+    End If
+    
+    ' Create backup of current calendar if it exists
+    CreateBackup "BeforeLoad"
+    
+    ' Open the selected file
+    Dim fullPath As String
+    fullPath = downloadsPath & latestFiles(selectedSource)
+    LogEvent "Loading calendar file: " & fullPath, "LoadAndPrepareCalendar"
+    
+    ' Clear or create Calendar sheet
+    Dim calSheet As Worksheet
+    On Error Resume Next
+    Set calSheet = ThisWorkbook.Sheets("Calendar")
+    On Error GoTo 0
+    
+    If calSheet Is Nothing Then
+        Set calSheet = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+        calSheet.Name = "Calendar"
+    Else
+        calSheet.Cells.Clear
+    End If
+    
+    ' Import based on source type
+    Select Case selectedSource
+        Case "ForexFactory"
+            ImportForexFactoryCalendar fullPath, calSheet
+        Case "Investing"
+            ImportInvestingCalendar fullPath, calSheet
+        Case "DailyFX"
+            ImportDailyFXCalendar fullPath, calSheet
+    End Select
+    
+    ' Apply formatting and validation to the sheet
+    FormatCalendarSheet calSheet
+    
+    ' Save the workbook
+    ThisWorkbook.Save
+    
+    LogEvent "Calendar loaded and formatted successfully", "LoadAndPrepareCalendar"
+    MsgBox "Calendar loaded and formatted successfully!", vbInformation, "Success"
+
+CleanExit:
+    Application.StatusBar = False
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+    Application.Calculation = xlCalculationAutomatic
+    Exit Sub
+    
+ErrorHandler:
+    LogEvent "Error: " & Err.Number & " - " & Err.Description, "LoadAndPrepareCalendar", "ERROR"
+    MsgBox "An error occurred: " & Err.Description, vbCritical, "Error"
+    Resume CleanExit
+End Sub
+
+' Import ForexFactory calendar
+Private Sub ImportForexFactoryCalendar(filePath As String, targetSheet As Worksheet)
+    Dim fileNum As Integer
+    Dim line As String
+    Dim fields() As String
+    Dim row As Long
+    Dim headers As Variant
+    Dim i As Integer
+    Dim totalRows As Long
+    
+    ' Count lines for progress bar
+    totalRows = CountLinesInFile(filePath)
+    
+    ' Create standard headers
+    headers = Array("id", "symbol", "eventName", "eventType", "impact", "tradeEnabled", _
+                    "entryTimeStr", "offset", "entryType", "slPips", "tpPips", "bufferPips", _
+                    "trailingType", "lotInput", "winStartStr", "winEndStr", "rawEventTime", _
+                    "magicNumber", "strategy", "notes", "genTimestamp", "pendingTrail")
+    
+    ' Write headers
+    For i = LBound(headers) To UBound(headers)
+        targetSheet.Cells(1, i + 1).Value = headers(i)
+    Next i
+    
+    ' Open file for reading
+    fileNum = FreeFile
+    Open filePath For Input As #fileNum
+    
+    ' Skip header line
+    Line Input #fileNum, line
+    
+    row = 2
+    Do Until EOF(fileNum)
+        Line Input #fileNum, line
+        
+        ' Skip empty lines
+        If Trim(line) <> "" Then
+            ' Handle commas in quotes
+            fields = ParseCSVLine(line)
+            
+            ' Map ForexFactory fields to our standard format
+            targetSheet.Cells(row, 1).Value = "FF" & row - 1  ' ID
+            
+            ' Set default values for required fields
+            targetSheet.Cells(row, 6).Value = "FALSE" ' tradeEnabled
+            targetSheet.Cells(row, 8).Value = "0" ' offset
+            targetSheet.Cells(row, 9).Value = "BOTH" ' entryType
+            targetSheet.Cells(row, 10).Value = GetSetting("DefaultSLPips", "20") ' slPips
+            targetSheet.Cells(row, 11).Value = GetSetting("DefaultTPPips", "40") ' tpPips
+            targetSheet.Cells(row, 12).Value = GetSetting("DefaultBufferPips", "5") ' bufferPips
+            targetSheet.Cells(row, 13).Value = GetSetting("DefaultTrailingType", "none") ' trailingType
+            targetSheet.Cells(row, 14).Value = "AUTO" ' lotInput
+            targetSheet.Cells(row, 18).Value = "0" ' magicNumber
+            targetSheet.Cells(row, 19).Value = "straddle" ' strategy
+            targetSheet.Cells(row, 22).Value = "false" ' pendingTrail
+            
+            ' Map ForexFactory specific fields
+            If UBound(fields) >= 0 Then targetSheet.Cells(row, 3).Value = fields(0) ' eventName (Title)
+            
+            If UBound(fields) >= 1 Then
+                ' Map country to symbol
+                Dim country As String
+                Dim symbol As String
+                country = fields(1)
+                symbol = MapCountryToCurrency(country)
+                targetSheet.Cells(row, 2).Value = symbol
+            End If
+            
+            If UBound(fields) >= 2 Then 
+                ' Map impact (importance)
+                Dim impact As String
+                impact = fields(2)
+                targetSheet.Cells(row, 5).Value = impact
+                If UCase(impact) = "HIGH" Then
+                    targetSheet.Cells(row, 4).Value = "HIGH VE" ' eventType
+                ElseIf UCase(impact) = "MEDIUM" Then
+                    targetSheet.Cells(row, 4).Value = "MED VE"
+                Else
+                    targetSheet.Cells(row, 4).Value = "LOW VE"
+                End If
+            End If
+            
+            If UBound(fields) >= 3 Then
+                ' Handle date and time
+                Dim eventDateTime As Date
+                Dim eventTimeStr As String
+                Dim winStart As Date
+                Dim winEnd As Date
+                
+                ' Try to parse date/time from ForexFactory format
+                On Error Resume Next
+                eventDateTime = ParseForexFactoryDateTime(fields(3))
+                On Error GoTo 0
+                
+                If eventDateTime > DateSerial(2000, 1, 1) Then
+                    eventTimeStr = Format(eventDateTime, "yyyy.mm.dd hh:mm")
+                    targetSheet.Cells(row, 7).Value = eventTimeStr ' entryTimeStr
+                    targetSheet.Cells(row, 17).Value = Format(eventDateTime, "yyyy-mm-dd hh:mm:ss") ' rawEventTime
+                    
+                    ' Set trade window: 5 minutes before to 30 minutes after
+                    winStart = DateAdd("n", -5, eventDateTime)
+                    winEnd = DateAdd("n", 30, eventDateTime)
+                    
+                    targetSheet.Cells(row, 15).Value = Format(winStart, "yyyy.mm.dd hh:mm") ' winStartStr
+                    targetSheet.Cells(row, 16).Value = Format(winEnd, "yyyy.mm.dd hh:mm") ' winEndStr
+                End If
+            End If
+            
+            ' Set generation timestamp
+            targetSheet.Cells(row, 21).Value = Format(Now, "yyyy-mm-dd hh:mm:ss")
+            
+            row = row + 1
+        End If
+        
+        ' Update progress
+        If row Mod 10 = 0 Then
+            ShowProgress "Importing calendar data", row - 1, totalRows
+        End If
+    Loop
+    
+    Close #fileNum
+    ResetProgress
+    
+    LogEvent "Imported " & (row - 2) & " events from ForexFactory", "ImportForexFactoryCalendar"
+End Sub
+
+' Import Investing.com calendar - stub that would be implemented similarly
+Private Sub ImportInvestingCalendar(filePath As String, targetSheet As Worksheet)
+    ' This would be implemented similar to ForexFactory but with Investing.com specific mapping
+    MsgBox "Investing.com calendar import not yet implemented. Using generic import.", vbInformation
+    ImportGenericCalendar filePath, targetSheet
+End Sub
+
+' Import DailyFX calendar - stub that would be implemented similarly
+Private Sub ImportDailyFXCalendar(filePath As String, targetSheet As Worksheet)
+    ' This would be implemented similar to ForexFactory but with DailyFX specific mapping
+    MsgBox "DailyFX calendar import not yet implemented. Using generic import.", vbInformation
+    ImportGenericCalendar filePath, targetSheet
+End Sub
+
+' Generic CSV import as fallback
+Private Sub ImportGenericCalendar(filePath As String, targetSheet As Worksheet)
+    ' Simple import that attempts to map columns by header name
+    Dim wb As Workbook
+    Set wb = Workbooks.Open(filePath)
+    
+    ' Try to identify headers
+    Dim srcSheet As Worksheet
+    Set srcSheet = wb.Sheets(1)
+    
+    ' Standardize our headers
+    Dim standardHeaders As Variant
+    standardHeaders = Array("id", "symbol", "eventName", "eventType", "impact", "tradeEnabled", _
+                           "entryTimeStr", "offset", "entryType", "slPips", "tpPips", "bufferPips", _
+                           "trailingType", "lotInput", "winStartStr", "winEndStr", "rawEventTime", _
+                           "magicNumber", "strategy", "notes", "genTimestamp", "pendingTrail")
+    
+    ' Map source headers to our standard headers
+    Dim headerMap As Object
+    Set headerMap = CreateObject("Scripting.Dictionary")
+    
+    Dim srcHeaders As Variant
+    ReDim srcHeaders(1 To srcSheet.Cells(1, srcSheet.Columns.Count).End(xlToLeft).Column)
+    
+    Dim i As Integer
+    For i = 1 To UBound(srcHeaders)
+        srcHeaders(i) = srcSheet.Cells(1, i).Value
+    Next i
+    
+    ' Try to map source headers to our standard format
+    For i = 1 To UBound(srcHeaders)
+        Dim headerVal As String
+        headerVal = LCase(srcHeaders(i))
+        
+        Select Case True
+            Case InStr(headerVal, "title") > 0 Or InStr(headerVal, "event") > 0 Or InStr(headerVal, "name") > 0
+                headerMap.Add i, 3 ' eventName
+            Case InStr(headerVal, "country") > 0 Or InStr(headerVal, "currency") > 0 Or InStr(headerVal, "symbol") > 0
+                headerMap.Add i, 2 ' symbol
+            Case InStr(headerVal, "impact") > 0 Or InStr(headerVal, "importance") > 0
+                headerMap.Add i, 5 ' impact
+            Case InStr(headerVal, "date") > 0 Or InStr(headerVal, "time") > 0
+                headerMap.Add i, 7 ' entryTimeStr
+        End Select
+    Next i
+    
+    ' Copy data with mapping
+    Dim lastRow As Long
+    lastRow = srcSheet.Cells(srcSheet.Rows.Count, 1).End(xlUp).Row
+    
+    Dim row As Long
+    For row = 2 To lastRow
+        ' Set default values
+        targetSheet.Cells(row, 1).Value = "GEN" & row - 1 ' ID
+        targetSheet.Cells(row, 6).Value = "FALSE" ' tradeEnabled
+        targetSheet.Cells(row, 8).Value = "0" ' offset
+        targetSheet.Cells(row, 9).Value = "BOTH" ' entryType
+        targetSheet.Cells(row, 10).Value = GetSetting("DefaultSLPips", "20") ' slPips
+        targetSheet.Cells(row, 11).Value = GetSetting("DefaultTPPips", "40") ' tpPips
+        targetSheet.Cells(row, 12).Value = GetSetting("DefaultBufferPips", "5") ' bufferPips
+        targetSheet.Cells(row, 13).Value = GetSetting("DefaultTrailingType", "none") ' trailingType
+        targetSheet.Cells(row, 14).Value = "AUTO" ' lotInput
+        targetSheet.Cells(row, 18).Value = "0" ' magicNumber
+        targetSheet.Cells(row, 19).Value = "straddle" ' strategy
+        targetSheet.Cells(row, 21).Value = Format(Now, "yyyy-mm-dd hh:mm:ss") ' genTimestamp
+        targetSheet.Cells(row, 22).Value = "false" ' pendingTrail
+        
+        ' Map source values
+        For i = 1 To UBound(srcHeaders)
+            If headerMap.Exists(i) Then
+                targetSheet.Cells(row, headerMap(i)).Value = srcSheet.Cells(row, i).Value
+            End If
+        Next i
+        
+        ' If we have a country but no symbol, try to map it
+        If targetSheet.Cells(row, 2).Value = "" And headerMap.Exists(2) Then
+            Dim country As String
+            country = srcSheet.Cells(row, headerMap(2)).Value
+            targetSheet.Cells(row, 2).Value = MapCountryToCurrency(country)
+        End If
+        
+        ' Update progress
+        If row Mod 10 = 0 Then
+            ShowProgress "Importing calendar data", row - 1, lastRow
+        End If
+    Next row
+    
+    wb.Close False
+    ResetProgress
+    
+    LogEvent "Imported " & (row - 2) & " events using generic import", "ImportGenericCalendar"
+End Sub
+
+' Format the calendar sheet with validation, etc.
+Public Sub FormatCalendarSheet(ws As Worksheet)
+    On Error GoTo ErrorHandler
+    
+    LogEvent "Starting calendar sheet formatting", "FormatCalendarSheet"
+    
+    Dim lastRow As Long
+    Dim headers As Range
+    Dim cell As Range
+    Dim trailingCol As Long
+    Dim lotInputCol As Long
+    Dim tradeEnabledCol As Long
+    Dim eventTypeCol As Long
+    Dim strategyCol As Long
+    Dim pendingTrailCol As Long
+    Dim slPipsCol As Long
+    Dim tpPipsCol As Long
+    Dim bufferPipsCol As Long
+    Dim impactCol As Long
+    Dim symbolCol As Long
+    
+    ' Find last row
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    If lastRow < 2 Then lastRow = 2 ' Ensure at least one data row
+    
+    ' Identify columns
+    Set headers = ws.Range(ws.Cells(1, 1), ws.Cells(1, ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column))
+    For Each cell In headers
+        Select Case cell.Value
+            Case "trailingType": trailingCol = cell.Column
+            Case "lotInput": lotInputCol = cell.Column
+            Case "tradeEnabled": tradeEnabledCol = cell.Column
+            Case "eventType": eventTypeCol = cell.Column
+            Case "strategy": strategyCol = cell.Column
+            Case "pendingTrail": pendingTrailCol = cell.Column
+            Case "slPips": slPipsCol = cell.Column
+            Case "tpPips": tpPipsCol = cell.Column
+            Case "bufferPips": bufferPipsCol = cell.Column
+            Case "impact": impactCol = cell.Column
+            Case "symbol": symbolCol = cell.Column
+        End Select
+    Next cell
+    
+    ' Freeze Top Row
+    ActiveWindow.FreezePanes = False
+    ws.Range("A2").Select
+    ActiveWindow.FreezePanes = True
+    
+    ' Autofit columns
+    ws.Cells.EntireColumn.AutoFit
+    
+    ' Center headers and bold
+    headers.Font.Bold = True
+    headers.HorizontalAlignment = xlCenter
+    headers.Interior.Color = RGB(200, 200, 200)
+    
+    ' Apply validation to required columns
+    If trailingCol > 0 Then
+        With ws.Range(ws.Cells(2, trailingCol), ws.Cells(lastRow, trailingCol)).Validation
+            .Delete
+            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:= _
+                 xlBetween, Formula1:="none,step,breakeven,percent"
+            .IgnoreBlank = True
+            .InCellDropdown = True
+            .ShowInput = True
+            .ShowError = True
+        End With
+    End If
+    
+    If lotInputCol > 0 Then
+        With ws.Range(ws.Cells(2, lotInputCol), ws.Cells(lastRow, lotInputCol)).Validation
+            .Delete
+            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:= _
+                 xlBetween, Formula1:="AUTO,0.01,0.05,0.1,0.2,0.3,0.5,1.0,2.0,3.0,5.0"
+            .IgnoreBlank = True
+            .InCellDropdown = True
+            .ShowInput = True
+            .ShowError = True
+        End With
+    End If
+    
+    If strategyCol > 0 Then
+        With ws.Range(ws.Cells(2, strategyCol), ws.Cells(lastRow, strategyCol)).Validation
+            .Delete
+            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:= _
+                 xlBetween, Formula1:="straddle,directional,stop_entry"
+            .IgnoreBlank = True
+            .InCellDropdown = True
+            .ShowInput = True
+            .ShowError = True
+        End With
+    End If
+    
+    If pendingTrailCol > 0 Then
+        With ws.Range(ws.Cells(2, pendingTrailCol), ws.Cells(lastRow, pendingTrailCol)).Validation
+            .Delete
+            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:= _
+                 xlBetween, Formula1:="true,false"
+            .IgnoreBlank = True
+            .InCellDropdown = True
+            .ShowInput = True
+            .ShowError = True
+        End With
+    End If
+    
+    If tradeEnabledCol > 0 Then
+        With ws.Range(ws.Cells(2, tradeEnabledCol), ws.Cells(lastRow, tradeEnabledCol)).Validation
+            .Delete
+            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:= _
+                 xlBetween, Formula1:="TRUE,FALSE"
+            .IgnoreBlank = True
+            .InCellDropdown = True
+            .ShowInput = True
+            .ShowError = True
+        End With
+    End If
+    
+    ' Add symbol validation with common forex pairs
+    If symbolCol > 0 Then
+        With ws.Range(ws.Cells(2, symbolCol), ws.Cells(lastRow, symbolCol)).Validation
+            .Delete
+            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:= _
+                 xlBetween, Formula1:="EURUSD,GBPUSD,USDJPY,USDCHF,AUDUSD,USDCAD,NZDUSD,EURGBP,EURJPY,GBPJPY"
+            .IgnoreBlank = True
+            .InCellDropdown = True
+            .ShowInput = True
+            .ShowError = True
+        End With
+    End If
+    
+    ' Add numeric validation for pips
+    If slPipsCol > 0 Then
+        With ws.Range(ws.Cells(2, slPipsCol), ws.Cells(lastRow, slPipsCol)).Validation
+            .Delete
+            .Add Type:=xlValidateDecimal, AlertStyle:=xlValidAlertStop, Operator:= _
+                 xlGreater, Formula1:="0"
+            .IgnoreBlank = False
+            .ShowInput = True
+            .ShowError = True
+        End With
+    End If
+    
+    If tpPipsCol > 0 Then
+        With ws.Range(ws.Cells(2, tpPipsCol), ws.Cells(lastRow, tpPipsCol)).Validation
+            .Delete
+            .Add Type:=xlValidateDecimal, AlertStyle:=xlValidAlertStop, Operator:= _
+                 xlGreater, Formula1:="0"
+            .IgnoreBlank = False
+            .ShowInput = True
+            .ShowError = True
+        End With
+    End If
+    
+    If bufferPipsCol > 0 Then
+        With ws.Range(ws.Cells(2, bufferPipsCol), ws.Cells(lastRow, bufferPipsCol)).Validation
+            .Delete
+            .Add Type:=xlValidateDecimal, AlertStyle:=xlValidAlertStop, Operator:= _
+                 xlGreater, Formula1:="0"
+            .IgnoreBlank = False
+            .ShowInput = True
+            .ShowError = True
+        End With
+    End If
+    
+    ' Color code tradeEnabled
+    If tradeEnabledCol > 0 Then
+        Dim rng As Range
+        Set rng = ws.Range(ws.Cells(2, tradeEnabledCol), ws.Cells(lastRow, tradeEnabledCol))
+        rng.FormatConditions.Delete
+        
+        With rng.FormatConditions.Add(Type:=xlCellValue, Operator:=xlEqual, Formula1:="=TRUE")
+            .Interior.Color = RGB(198, 239, 206) ' Light Green
+        End With
+        With rng.FormatConditions.Add(Type:=xlCellValue, Operator:=xlEqual, Formula1:="=FALSE")
+            .Interior.Color = RGB(255, 199, 206) ' Light Red
+        End With
+    End If
+    
+    ' Color highlight event type
+    If eventTypeCol > 0 Then
+        Dim rng2 As Range
+        Set rng2 = ws.Range(ws.Cells(2, eventTypeCol), ws.Cells(lastRow, eventTypeCol))
+        
+        rng2.FormatConditions.Delete
+        
+        With rng2.FormatConditions.Add(Type:=xlCellValue, Operator:=xlEqual, Formula1:="=""HIGH VE""")
+            .Interior.Color = RGB(255, 153, 153) ' Red for HIGH
+        End With
+        With rng2.FormatConditions.Add(Type:=xlCellValue, Operator:=xlEqual, Formula1:="=""MED VE""")
+            .Interior.Color = RGB(255, 255, 153) ' Yellow for MED
+        End With
+    End If
+    
+    ' Color code impact
+    If impactCol > 0 Then
+        Dim rng3 As Range
+        Set rng3 = ws.Range(ws.Cells(2, impactCol), ws.Cells(lastRow, impactCol))
+        
+        rng3.FormatConditions.Delete
+        
+        With rng3.FormatConditions.Add(Type:=xlCellValue, Operator:=xlEqual, Formula1:="=""HIGH""")
+            .Interior.Color = RGB(255, 153, 153) ' Red for HIGH
+        End With
+        With rng3.FormatConditions.Add(Type:=xlCellValue, Operator:=xlEqual, Formula1:="=""MEDIUM""")
+            .Interior.Color = RGB(255, 255, 153) ' Yellow for MEDIUM
+        End With
+        With rng3.FormatConditions.Add(Type:=xlCellValue, Operator:=xlEqual, Formula1:="=""LOW""")
+            .Interior.Color = RGB(204, 255, 204) ' Green for LOW
+        End With
+    End If
+    
+    ' Add data filtering
+    ws.Range("A1").CurrentRegion.AutoFilter
+    
+    ' Add borders for better readability
+    ws.Range("A1").CurrentRegion.Borders.LineStyle = xlContinuous
+    
+    LogEvent "Calendar sheet formatting completed", "FormatCalendarSheet"
+    Exit Sub
+    
+ErrorHandler:
+    LogEvent "Error formatting calendar: " & Err.Number & " - " & Err.Description, "FormatCalendarSheet", "ERROR"
+    MsgBox "An error occurred while formatting: " & Err.Description, vbCritical, "Error"
+    Resume Next
+End Sub
+
+'=========================================================================
+' EXPORT FUNCTIONS
+'=========================================================================
+
+' Export calendar to MQL4
+Public Sub ExportToMQL4()
+    On Error GoTo ErrorHandler
+    
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    
+    LogEvent "Starting export to MQL4", "ExportToMQL4"
+    
+    Dim ws As Worksheet
+    On Error Resume Next
+    Set ws = ThisWorkbook.Sheets("Calendar")
+    On Error GoTo 0
+    
+    If ws Is Nothing Then
+        MsgBox "No Calendar sheet found. Please load a calendar first.", vbExclamation, "Error"
+        GoTo CleanExit
+    End If
+    
+    ' Validate critical data before export
+    If Not ValidateCalendarData(ws) Then
+        MsgBox "Calendar validation failed. Please fix the errors and try again.", vbExclamation, "Validation Failed"
+        GoTo CleanExit
+    End If
+    
+    ' Create backup before exporting
+    CreateBackup "BeforeExport"
+    
+    ' Get export path from settings
+    Dim exportPath As String
+    exportPath = GetSetting("MQL4Path", FindMetaTraderPath())
+    
+    ' Ask user to confirm or modify the path
+    Dim response As VbMsgBoxResult
+    response = MsgBox("Export to the following path?" & vbCrLf & _
+                     exportPath & vbCrLf & vbCrLf & _
+                     "Click Yes to continue with this path, or No to select a different path.", _
+                     vbYesNo + vbQuestion, "Confirm Export Path")
+                     
+    If response = vbNo Then
+        ' Let user select a different path
+        With Application.FileDialog(msoFileDialogFolderPicker)
+            .Title = "Select MQL4 Files Directory"
+            .ButtonName = "Select"
+            If .Show = -1 Then
+                exportPath = .SelectedItems(1)
+                If Right(exportPath, 1) <> "\" Then exportPath = exportPath & "\"
+                
+                ' Ask if this should be saved as the new default
+                If MsgBox("Save this as the default MQL4 path?", vbYesNo + vbQuestion, "Save Setting") = vbYes Then
+                    SaveSetting "MQL4Path", exportPath
+                End If
+            Else
+                MsgBox "Export cancelled.", vbInformation, "Cancelled"
+                GoTo CleanExit
+            End If
+        End With
+    End If
+    
+    ' Ensure the directory exists
+    EnsureDirectoryExists exportPath
+    
+    ' Generate timestamp for filename
+    Dim timeStamp As String
+    timeStamp = Format(Now, "yyyymmdd_HHmmss")
+    
+    ' Create final path
+    Dim finalPath As String
+    finalPath = exportPath & "ea_events_" & timeStamp & ".csv"
+    
+    ' Save as CSV
+    LogEvent "Exporting to: " & finalPath, "ExportToMQL4"
+    
+    ' Create a temporary workbook to save as CSV (avoids issues with current workbook)
+    Dim tempWb As Workbook
+    ws.Copy
+    Set tempWb = ActiveWorkbook
+    
+    tempWb.SaveAs Filename:=finalPath, FileFormat:=xlCSV, CreateBackup:=False
+    tempWb.Close SaveChanges:=False
+    
+    LogEvent "Export completed successfully", "ExportToMQL4"
+    MsgBox "Successfully exported to:" & vbCrLf & finalPath, vbInformation, "Export Successful"
+    
+    ' Offer to create a backup
+    If MsgBox("Would you like to create a backup of the current workbook?", vbYesNo + vbQuestion, "Create Backup") = vbYes Then
+        CreateBackup "AfterExport"
+    End If
+    
+CleanExit:
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+    Exit Sub
+    
+ErrorHandler:
+    LogEvent "Error exporting: " & Err.Number & " - " & Err.Description, "ExportToMQL4", "ERROR"
+    MsgBox "An error occurred during export: " & Err.Description, vbCritical, "Error"
+    Resume CleanExit
+End Sub
+
+' Validate calendar data before export
+Private Function ValidateCalendarData(ws As Worksheet) As Boolean
+    Dim lastRow As Long
+    Dim errorCount As Integer
+    Dim warningCount As Integer
+    Dim errorMessages As String
+    Dim row As Long
+    
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    If lastRow < 2 Then
+        MsgBox "No calendar data found.", vbExclamation, "Validation Failed"
+        ValidateCalendarData = False
+        Exit Function
+    End If
+    
+    ' Find required columns
+    Dim eventNameCol As Integer
+    Dim symbolCol As Integer
+    Dim tradeEnabledCol As Integer
+    Dim entryTimeCol As Integer
+    Dim slPipsCol As Integer
+    Dim tpPipsCol As Integer
+    
+    For i = 1 To ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+        Select Case ws.Cells(1, i).Value
+            Case "eventName": eventNameCol = i
+            Case "symbol": symbolCol = i
+            Case "tradeEnabled": tradeEnabledCol = i
+            Case "entryTimeStr": entryTimeCol = i
+            Case "slPips": slPipsCol = i
+            Case "tpPips": tpPipsCol = i
+        End Select
+    Next i
+    
+    ' Validate required columns exist
+    If eventNameCol = 0 Or symbolCol = 0 Or tradeEnabledCol = 0 Or _
+       entryTimeCol = 0 Or slPipsCol = 0 Or tpPipsCol = 0 Then
+        MsgBox "One or more required columns missing from calendar data.", vbExclamation, "Validation Failed"
+        ValidateCalendarData = False
+        Exit Function
+    End If
+    
+    ' Check each enabled row for required data
+    For row = 2 To lastRow
+        If UCase(ws.Cells(row, tradeEnabledCol).Value) = "TRUE" Then
+            ' Check for missing required values
+            If Trim(ws.Cells(row, eventNameCol).Value) = "" Then
+                errorCount = errorCount + 1
+                errorMessages = errorMessages & "Row " & row & ": Missing event name" & vbCrLf
+            End If
+            
+            If Trim(ws.Cells(row, symbolCol).Value) = "" Then
+                errorCount = errorCount + 1
+                errorMessages = errorMessages & "Row " & row & ": Missing symbol" & vbCrLf
+            End If
+            
+            If Trim(ws.Cells(row, entryTimeCol).Value) = "" Then
+                errorCount = errorCount + 1
+                errorMessages = errorMessages & "Row " & row & ": Missing entry time" & vbCrLf
+            End If
+            
+            ' Check for invalid numeric values
+            If Not IsNumeric(ws.Cells(row, slPipsCol).Value) Or ws.Cells(row, slPipsCol).Value <= 0 Then
+                errorCount = errorCount + 1
+                errorMessages = errorMessages & "Row " & row & ": Invalid stop loss pips" & vbCrLf
+            End If
+            
+            If Not IsNumeric(ws.Cells(row, tpPipsCol).Value) Or ws.Cells(row, tpPipsCol).Value <= 0 Then
+                errorCount = errorCount + 1
+                errorMessages = errorMessages & "Row " & row & ": Invalid take profit pips" & vbCrLf
+            End If
+        End If
+    Next row
+    
+    ' Display errors and decide if we should continue
+    If errorCount > 0 Then
+        MsgBox "Found " & errorCount & " errors:" & vbCrLf & vbCrLf & errorMessages, vbCritical, "Validation Failed"
+        ValidateCalendarData = False
+    Else
+        ValidateCalendarData = True
+    End If
+End Function
+
+'=========================================================================
+' ANALYSIS AND STATISICS
+'=========================================================================
+
+' Import trading results for analysis
+Public Sub ImportTradingResults()
+    On Error GoTo ErrorHandler
+    
+    ' Get MQL4 path
+    Dim mql4Path As String
+    mql4Path = GetSetting("MQL4Path", FindMetaTraderPath())
+    
+    ' Let user select results file
+    Dim resultFile As String
+    With Application.FileDialog(msoFileDialogFilePicker)
+        .Title = "Select Trading Results CSV"
+        .Filters.Add "CSV Files", "*.csv"
+        .InitialFileName = mql4Path
+        
+        If .Show = -1 Then
+            resultFile = .SelectedItems(1)
+        Else
+            MsgBox "Operation cancelled.", vbInformation, "Cancelled"
+            Exit Sub
+        End If
+    End With
+    
+    ' Create or select Results sheet
+    Dim resultsSheet As Worksheet
+    On Error Resume Next
+    Set resultsSheet = ThisWorkbook.Sheets("Results")
+    On Error GoTo 0
+    
+    If resultsSheet Is Nothing Then
+        Set resultsSheet = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+        resultsSheet.Name = "Results"
+    Else
+        resultsSheet.Cells.Clear
+    End If
+    
+    ' Import results
+    With resultsSheet.QueryTables.Add(Connection:="TEXT;" & resultFile, Destination:=resultsSheet.Range("A1"))
+        .TextFileParseType = xlDelimited
+        .TextFileCommaDelimiter = True
+        .TextFileConsecutiveDelimiter = False
+        .TextFileTabDelimiter = False
+        .TextFileSemicolonDelimiter = True
+        .Refresh BackgroundQuery:=False
+    End With
+    
+    ' Format results
+    resultsSheet.Range("A1").CurrentRegion.Borders.LineStyle = xlContinuous
+    resultsSheet.Range("A1").CurrentRegion.Columns.AutoFit
+    resultsSheet.Range("A1").CurrentRegion.Rows(1).Font.Bold = True
+    
+    ' Create basic statistics
+    CreateStatistics resultsSheet
+    
+    MsgBox "Trading results imported successfully.", vbInformation, "Import Complete"
+    resultsSheet.Activate
+    
+    Exit Sub
+    
+ErrorHandler:
+    LogEvent "Error importing results: " & Err.Number & " - " & Err.Description, "ImportTradingResults", "ERROR"
+    MsgBox "An error occurred during import: " & Err.Description, vbCritical, "Error"
+End Sub
+
+' Create statistics from trading results
+Private Sub CreateStatistics(resultsSheet As Worksheet)
+    ' Create or get Stats sheet
+    Dim statsSheet As Worksheet
+    On Error Resume Next
+    Set statsSheet = ThisWorkbook.Sheets("Statistics")
+    On Error GoTo 0
+    
+    If statsSheet Is Nothing Then
+        Set statsSheet = ThisWorkbook.Sheets.Add(After:=resultsSheet)
+        statsSheet.Name = "Statistics"
+    Else
+        statsSheet.Cells.Clear
+    End If
+    
+    ' Add title
+    statsSheet.Range("A1").Value = "Trading Statistics"
+    statsSheet.Range("A1").Font.Size = 14
+    statsSheet.Range("A1").Font.Bold = True
+    
+    ' Find profit column in results
+    Dim profitCol As Integer
+    Dim dateCol As Integer
+    Dim eventCol As Integer
+    Dim symbolCol As Integer
+    
+    For i = 1 To resultsSheet.Cells(1, resultsSheet.Columns.Count).End(xlToLeft).Column
+        Select Case LCase(resultsSheet.Cells(1, i).Value)
+            Case "profit": profitCol = i
+            Case "date", "datetime", "time": dateCol = i
+            Case "event", "eventname": eventCol = i
+            Case "symbol", "pair": symbolCol = i
+        End Select
+    Next i
+    
+    ' Validate we found required columns
+    If profitCol = 0 Then
+        MsgBox "Could not find Profit column in results.", vbExclamation, "Error"
+        Exit Sub
+    End If
+    
+    ' Calculate basic statistics
+    Dim lastRow As Long
+    lastRow = resultsSheet.Cells(resultsSheet.Rows.Count, 1).End(xlUp).Row
+    
+    Dim totalTrades As Long
+    Dim winningTrades As Long
+    Dim losingTrades As Long
+    Dim totalProfit As Double
+    Dim totalWinAmount As Double
+    Dim totalLossAmount As Double
+    Dim maxProfit As Double
+    Dim maxLoss As Double
+    Dim maxConsecWins As Long
+    Dim maxConsecLosses As Long
+    Dim currentConsecWins As Long
+    Dim currentConsecLosses As Long
+    
+    totalTrades = lastRow - 1 ' Minus header
+    
+    ' Calculate statistics
+    For i = 2 To lastRow
+        Dim profit As Double
+        profit = resultsSheet.Cells(i, profitCol).Value
+        
+        totalProfit = totalProfit + profit
+        
+        If profit > 0 Then
+            winningTrades = winningTrades + 1
+            totalWinAmount = totalWinAmount + profit
+            If profit > maxProfit Then maxProfit = profit
+            
+            currentConsecWins = currentConsecWins + 1
+            currentConsecLosses = 0
+            
+            If currentConsecWins > maxConsecWins Then
+                maxConsecWins = currentConsecWins
+            End If
+        ElseIf profit < 0 Then
+            losingTrades = losingTrades + 1
+            totalLossAmount = totalLossAmount + profit ' Will be negative
+            If profit < maxLoss Then maxLoss = profit
+            
+            currentConsecLosses = currentConsecLosses + 1
+            currentConsecWins = 0
+            
+            If currentConsecLosses > maxConsecLosses Then
+                maxConsecLosses = currentConsecLosses
+            End If
+        End If
+    Next i
+    
+    ' Output statistics to sheet
+    Dim row As Integer
+    row = 3
+    
+    statsSheet.Cells(row, 1).Value = "Total Trades:"
+    statsSheet.Cells(row, 2).Value = totalTrades
+    row = row + 1
+    
+    statsSheet.Cells(row, 1).Value = "Winning Trades:"
+    statsSheet.Cells(row, 2).Value = winningTrades
+    statsSheet.Cells(row, 3).Value = IIf(totalTrades > 0, Format(winningTrades / totalTrades, "0.00%"), "N/A")
+    row = row + 1
+    
+    statsSheet.Cells(row, 1).Value = "Losing Trades:"
+    statsSheet.Cells(row, 2).Value = losingTrades
+    statsSheet.Cells(row, 3).Value = IIf(totalTrades > 0, Format(losingTrades / totalTrades, "0.00%"), "N/A")
+    row = row + 1
+    
+    statsSheet.Cells(row, 1).Value = "Total Profit/Loss:"
+    statsSheet.Cells(row, 2).Value = totalProfit
+    statsSheet.Cells(row, 2).NumberFormat = "0.00"
+    row = row + 2
+    
+    statsSheet.Cells(row, 1).Value = "Average Win:"
+    statsSheet.Cells(row, 2).Value = IIf(winningTrades > 0, totalWinAmount / winningTrades, 0)
+    statsSheet.Cells(row, 2).NumberFormat = "0.00"
+    row = row + 1
+    
+    statsSheet.Cells(row, 1).Value = "Average Loss:"
+    statsSheet.Cells(row, 2).Value = IIf(losingTrades > 0, totalLossAmount / losingTrades, 0)
+    statsSheet.Cells(row, 2).NumberFormat = "0.00"
+    row = row + 1
+    
+    statsSheet.Cells(row, 1).Value = "Largest Win:"
+    statsSheet.Cells(row, 2).Value = maxProfit
+    statsSheet.Cells(row, 2).NumberFormat = "0.00"
+    row = row + 1
+    
+    statsSheet.Cells(row, 1).Value = "Largest Loss:"
+    statsSheet.Cells(row, 2).Value = maxLoss
+    statsSheet.Cells(row, 2).NumberFormat = "0.00"
+    row = row + 1
+    
+    statsSheet.Cells(row, 1).Value = "Max Consecutive Wins:"
+    statsSheet.Cells(row, 2).Value = maxConsecWins
+    row = row + 1
+    
+    statsSheet.Cells(row, 1).Value = "Max Consecutive Losses:"
+    statsSheet.Cells(row, 2).Value = maxConsecLosses
+    row = row + 1
+    
+    statsSheet.Cells(row, 1).Value = "Profit Factor:"
+    statsSheet.Cells(row, 2).Value = IIf(totalLossAmount <> 0, Abs(totalWinAmount / totalLossAmount), "∞")
+    If IsNumeric(statsSheet.Cells(row, 2).Value) Then
+        statsSheet.Cells(row, 2).NumberFormat = "0.00"
+    End If
+    row = row + 2
+    
+    ' Create charts if we have enough data
+    If totalTrades >= 5 Then
+        ' Profit over time chart if we have date column
+        If dateCol > 0 Then
+            CreateProfitChart resultsSheet, statsSheet, dateCol, profitCol
+        End If
+        
+        ' Symbol performance if we have symbol column
+        If symbolCol > 0 Then
+            CreateSymbolPerformanceChart resultsSheet, statsSheet, symbolCol, profitCol
+        End If
+    End If
+    
+    ' Format statistics
+    statsSheet.Range("A3:C" & row).Borders.LineStyle = xlContinuous
+    statsSheet.Range("A3:A" & row).Font.Bold = True
+    statsSheet.Columns("A:C").AutoFit
+    
+    ' Add conditional formatting for positive/negative numbers
+    statsSheet.Range("B3:C" & row).FormatConditions.Delete
+    
+    With statsSheet.Range("B3:C" & row).FormatConditions.Add(Type:=xlCellValue, Operator:=xlGreater, Formula1:="0")
+        .Interior.Color = RGB(198, 239, 206) ' Light Green
+        .Font.Color = RGB(0, 97, 0) ' Dark Green
+    End With
+    
+    With statsSheet.Range("B3:C" & row).FormatConditions.Add(Type:=xlCellValue, Operator:=xlLess, Formula1:="0")
+        .Interior.Color = RGB(255, 199, 206) ' Light Red
+        .Font.Color = RGB(156, 0, 6) ' Dark Red
+    End With
+End Sub
+
+' Create profit over time chart
+Private Sub CreateProfitChart(dataSheet As Worksheet, targetSheet As Worksheet, dateCol As Integer, profitCol As Integer)
+    ' Create chart on the statistics sheet
+    Dim chartObj As ChartObject
+    Set chartObj = targetSheet.ChartObjects.Add(Left:=300, Top:=50, Width:=450, Height:=250)
+    
+    Dim lastRow As Long
+    lastRow = dataSheet.Cells(dataSheet.Rows.Count, 1).End(xlUp).Row
+    
+    ' Create chart
+    With chartObj.Chart
+        .ChartType = xlLine
+        .SetSourceData Source:=dataSheet.Range(dataSheet.Cells(2, dateCol), dataSheet.Cells(lastRow, dateCol))
+        .SeriesCollection(1).Values = dataSheet.Range(dataSheet.Cells(2, profitCol), dataSheet.Cells(lastRow, profitCol))
+        .SeriesCollection(1).Name = "Profit/Loss"
+        
+        ' Add titles
+        .HasTitle = True
+        .ChartTitle.Text = "Profit/Loss Over Time"
+        .Axes(xlCategory, xlPrimary).HasTitle = True
+        .Axes(xlCategory, xlPrimary).AxisTitle.Text = "Date"
+        .Axes(xlValue, xlPrimary).HasTitle = True
+        .Axes(xlValue, xlPrimary).AxisTitle.Text = "Profit/Loss"
+        
+        ' Format
+        .HasLegend = True
+        .Legend.Position = xlLegendPositionBottom
+        .SeriesCollection(1).Format.Line.ForeColor.RGB = RGB(0, 112, 192)
+        .SeriesCollection(1).Format.Line.Weight = 2
+    End With
+End Sub
+
+' Create symbol performance chart
+Private Sub CreateSymbolPerformanceChart(dataSheet As Worksheet, targetSheet As Worksheet, symbolCol As Integer, profitCol As Integer)
+    ' Group by symbol and calculate total profit
+    Dim symbolDict As Object
+    Set symbolDict = CreateObject("Scripting.Dictionary")
+    
+    Dim lastRow As Long
+    lastRow = dataSheet.Cells(dataSheet.Rows.Count, 1).End(xlUp).Row
+    
+    ' Calculate profit for each symbol
+    For i = 2 To lastRow
+        Dim symbol As String
+        Dim profit As Double
+        
+        symbol = dataSheet.Cells(i, symbolCol).Value
+        profit = dataSheet.Cells(i, profitCol).Value
+        
+        If symbolDict.Exists(symbol) Then
+            symbolDict(symbol) = symbolDict(symbol) + profit
+        Else
+            symbolDict.Add symbol, profit
+        End If
+    Next i
+    
+    ' Create data range for chart
+    Dim tempSheet As Worksheet
+    Set tempSheet = ThisWorkbook.Sheets.Add(After:=targetSheet)
+    tempSheet.Name = "ChartData_Temp"
+    tempSheet.Visible = xlSheetVeryHidden
+    
+    Dim row As Integer
+    row = 1
+    
+    tempSheet.Cells(row, 1).Value = "Symbol"
+    tempSheet.Cells(row, 2).Value = "Profit/Loss"
+    row = row + 1
+    
+    Dim key As Variant
+    For Each key In symbolDict.Keys
+        tempSheet.Cells(row, 1).Value = key
+        tempSheet.Cells(row, 2).Value = symbolDict(key)
+        row = row + 1
+    Next key
+    
+    ' Create chart
+    Dim chartObj As ChartObject
+    Set chartObj = targetSheet.ChartObjects.Add(Left:=300, Top:=350, Width:=450, Height:=250)
+    
+    With chartObj.Chart
+        .ChartType = xlColumnClustered
+        .SetSourceData Source:=tempSheet.Range("A1:B" & (row - 1))
+        
+        ' Add titles
+        .HasTitle = True
+        .ChartTitle.Text = "Performance by Symbol"
+        .Axes(xlCategory, xlPrimary).HasTitle = True
+        .Axes(xlCategory, xlPrimary).AxisTitle.Text = "Symbol"
+        .Axes(xlValue, xlPrimary).HasTitle = True
+        .Axes(xlValue, xlPrimary).AxisTitle.Text = "Profit/Loss"
+        
+        ' Format
+        .HasLegend = False
+        
+        ' Color bars based on value
+        For i = 1 To .SeriesCollection(1).Points.Count
+            If .SeriesCollection(1).Points(i).Value >= 0 Then
+                .SeriesCollection(1).Points(i).Format.Fill.ForeColor.RGB = RGB(0, 176, 80) ' Green
+            Else
+                .SeriesCollection(1).Points(i).Format.Fill.ForeColor.RGB = RGB(255, 0, 0) ' Red
+            End If
+        Next i
+    End With
+End Sub
+
+'=========================================================================
+' HELPER FUNCTIONS
+'=========================================================================
+
+' Parse CSV line that may contain quoted fields with commas
+Private Function ParseCSVLine(Line As String) As String()
+    Dim result() As String
+    Dim fieldCount As Integer
+    Dim i As Integer
+    Dim inQuotes As Boolean
+    Dim curr As String
+    
+    fieldCount = 1
+    For i = 1 To Len(Line)
+        If Mid(Line, i, 1) = """" Then
+            inQuotes = Not inQuotes
+        ElseIf Mid(Line, i, 1) = "," And Not inQuotes Then
+            fieldCount = fieldCount + 1
+        End If
+    Next i
+    
+    ReDim result(fieldCount - 1)
+    
+    fieldCount = 0
+    curr = ""
+    inQuotes = False
+    
+    For i = 1 To Len(Line)
+        If Mid(Line, i, 1) = """" Then
+            inQuotes = Not inQuotes
+        ElseIf Mid(Line, i, 1) = "," And Not inQuotes Then
+            result(fieldCount) = curr
+            curr = ""
+            fieldCount = fieldCount + 1
+        Else
+            curr = curr & Mid(Line, i, 1)
+        End If
+    Next i
+    
+    result(fieldCount) = curr
+    ParseCSVLine = result
+End Function
+
+' Count lines in a file
+Private Function CountLinesInFile(filePath As String) As Long
+    Dim fileNum As Integer
+    Dim lineCount As Long
+    Dim dummyLine As String
+    
+    fileNum = FreeFile
+    Open filePath For Input As #fileNum
+    
+    lineCount = 0
+    Do Until EOF(fileNum)
+        Line Input #fileNum, dummyLine
+        lineCount = lineCount + 1
+    Loop
+    
+    Close #fileNum
+    CountLinesInFile = lineCount
+End Function
+
+' Parse ForexFactory date/time format
+Private Function ParseForexFactoryDateTime(dateTimeStr As String) As Date
+    On Error GoTo ErrorHandler
+    
+    ' Example formats: "Mon Oct 23 8:30am" or "2023-10-23 08:30:00"
+    Dim result As Date
+    
+    ' Try ISO format first (YYYY-MM-DD HH:MM:SS)
+    If Len(dateTimeStr) >= 10 And Mid(dateTimeStr, 5, 1) = "-" And Mid(dateTimeStr, 8, 1) = "-" Then
+        result = CDate(dateTimeStr)
+        ParseForexFactoryDateTime = result
+        Exit Function
+    End If
+    
+    ' Try ForexFactory format (Day Month Date Time)
+    Dim parts As Variant
+    parts = Split(dateTimeStr, " ")
+    
+    If UBound(parts) < 3 Then
+        ' Invalid format
+        ParseForexFactoryDateTime = DateSerial(1900, 1, 1)
+        Exit Function
+    End If
+    
+    ' Get month
+    Dim monthStr As String
+    Dim monthNum As Integer
+    
+    monthStr = parts(1)
+    Select Case UCase(Left(monthStr, 3))
+        Case "JAN": monthNum = 1
+        Case "FEB": monthNum = 2
+        Case "MAR": monthNum = 3
+        Case "APR": monthNum = 4
+        Case "MAY": monthNum = 5
+        Case "JUN": monthNum = 6
+        Case "JUL": monthNum = 7
+        Case "AUG": monthNum = 8
+        Case "SEP": monthNum = 9
+        Case "OCT": monthNum = 10
+        Case "NOV": monthNum = 11
+        Case "DEC": monthNum = 12
+        Case Else: monthNum = 1
+    End Select
+    
+    ' Get day
+    Dim dayNum As Integer
+    dayNum = CInt(parts(2))
+    
+    ' Get year (current year as ForexFactory usually doesn't include it)
+    Dim yearNum As Integer
+    yearNum = Year(Date)
+    
+    ' Get time
+    Dim timeStr As String
+    Dim hourNum As Integer
+    Dim minuteNum As Integer
+    Dim isPM As Boolean
+    
+    timeStr = parts(3)
+    
+    ' Handle AM/PM
+    isPM = (InStr(LCase(timeStr), "pm") > 0)
+    timeStr = Replace(Replace(timeStr, "am", ""), "pm", "")
+    
+    ' Parse hours and minutes
+    If InStr(timeStr, ":") > 0 Then
+        Dim timeParts As Variant
+        timeParts = Split(timeStr, ":")
+        hourNum = CInt(timeParts(0))
+        minuteNum = CInt(timeParts(1))
+    Else
+        hourNum = CInt(timeStr)
+        minuteNum = 0
+    End If
+    
+    ' Adjust for PM
+    If isPM And hourNum < 12 Then
+        hourNum = hourNum + 12
+    End If
+    
+    ' Create date
+    result = DateSerial(yearNum, monthNum, dayNum) + TimeSerial(hourNum, minuteNum, 0)
+    ParseForexFactoryDateTime = result
+    Exit Function
+    
+ErrorHandler:
+    ParseForexFactoryDateTime = DateSerial(1900, 1, 1)
+End Function
+
+' Map country to currency symbol
+Private Function MapCountryToCurrency(countryName As String) As String
+    ' Default return value
+    MapCountryToCurrency = ""
+    
+    ' Handle empty input
+    If Trim(countryName) = "" Then Exit Function
+    
+    ' Convert to uppercase for case-insensitive matching
+    Dim country As String
+    country = UCase(Trim(countryName))
+    
+    ' Map common countries to currencies
+    Select Case country
+        Case "U.S.", "USA", "UNITED STATES", "US", "USD"
+            MapCountryToCurrency = "EURUSD"
+        
+        Case "JAPAN", "JPY"
+            MapCountryToCurrency = "USDJPY"
+            
+        Case "EURO", "EUROZONE", "EUR"
+            MapCountryToCurrency = "EURUSD"
+            
+        Case "GREAT BRITAIN", "UK", "UNITED KINGDOM", "GBP", "BRITAIN", "ENGLAND"
+            MapCountryToCurrency = "GBPUSD"
+            
+        Case "SWITZERLAND", "CHF"
+            MapCountryToCurrency = "USDCHF"
+            
+        Case "AUSTRALIA", "AUD"
+            MapCountryToCurrency = "AUDUSD"
+            
+        Case "CANADA", "CAD"
+            MapCountryToCurrency = "USDCAD"
+            
+        Case "NEW ZEALAND", "NZD"
+            MapCountryToCurrency = "NZDUSD"
+            
+        Case Else
+            ' For unrecognized countries, default to EURUSD
+            MapCountryToCurrency = "EURUSD"
+    End Select
+End Function
+
+'=========================================================================
+' INITIALIZATION AND UI CREATION
+'=========================================================================
+
+' Initialize the system
+Public Sub InitializeSystem()
+    ' Create settings if they don't exist
+    EnsureSettingsSheet
+    
+    ' Ensure required directories exist
+    EnsureDirectoryExists GetSetting("BackupFolder", ThisWorkbook.Path & "\Backups\")
+    EnsureDirectoryExists GetSetting("LogFolder", ThisWorkbook.Path & "\Logs\")
+    
+    ' Create or verify Calendar sheet
+    Dim calSheet As Worksheet
+    On Error Resume Next
+    Set calSheet = ThisWorkbook.Sheets("Calendar")
+    On Error GoTo 0
+    
+    If calSheet Is Nothing Then
+        Set calSheet = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+        calSheet.Name = "Calendar"
+        
+        ' Add basic headers
+        calSheet.Range("A1").Value = "id"
+        calSheet.Range("B1").Value = "symbol"
+        calSheet.Range("C1").Value = "eventName"
+        calSheet.Range("D1").Value = "eventType"
+        calSheet.Range("E1").Value = "impact"
+        calSheet.Range("F1").Value = "tradeEnabled"
+        calSheet.Range("G1").Value = "entryTimeStr"
+        calSheet.Range("H1").Value = "offset"
+        calSheet.Range("I1").Value = "entryType"
+        calSheet.Range("J1").Value = "slPips"
+        calSheet.Range("K1").Value = "tpPips"
+        calSheet.Range("L1").Value = "bufferPips"
+        calSheet.Range("M1").Value = "trailingType"
+        calSheet.Range("N1").Value = "lotInput"
+        calSheet.Range("O1").Value = "winStartStr"
+        calSheet.Range("P1").Value = "winEndStr"
+        calSheet.Range("Q1").Value = "rawEventTime"
+        calSheet.Range("R1").Value = "magicNumber"
+        calSheet.Range("S1").Value = "strategy"
+        calSheet.Range("T1").Value = "notes"
+        calSheet.Range("U1").Value = "genTimestamp"
+        calSheet.Range("V1").Value = "pendingTrail"
+        
+        ' Format the headers
+        FormatCalendarSheet calSheet
+    End If
+    
+    ' Create or update custom ribbon
+    CreateCustomRibbon
+    
+    LogEvent "System initialized successfully", "InitializeSystem"
+End Sub
+
+' Create custom ribbon with buttons
+Private Sub CreateCustomRibbon()
+    ' In VBA we can't dynamically create a ribbon, but we can add a toolbar
+    ' This is a placeholder - in a real implementation, you would use a proper Ribbon XML
+    On Error Resume Next
+    Application.CommandBars("Forex Calendar").Delete
+    
+    Dim myBar As CommandBar
+    Set myBar = Application.CommandBars.Add(Name:="Forex Calendar", Position:=msoBarTop, Temporary:=True)
+    myBar.Visible = True
+    
+    With myBar.Controls.Add(Type:=msoControlButton)
+        .Caption = "Load Calendar"
+        .Style = msoButtonCaption
+        .OnAction = "LoadAndPrepareCalendar"
+        .FaceId = 23
+    End With
+    
+    With myBar.Controls.Add(Type:=msoControlButton)
+        .Caption = "Format Sheet"
+        .Style = msoButtonCaption
+        .OnAction = "FormatCurrentSheet"
+        .FaceId = 186
+    End With
+    
+    With myBar.Controls.Add(Type:=msoControlButton)
+        .Caption = "Export to MQL4"
+        .Style = msoButtonCaption
+        .OnAction = "ExportToMQL4"
+        .FaceId = 17
+    End With
+    
+    With myBar.Controls.Add(Type:=msoControlButton)
+        .Caption = "Import Results"
+        .Style = msoButtonCaption
+        .OnAction = "ImportTradingResults"
+        .FaceId = 24
+    End With
+    
+    With myBar.Controls.Add(Type:=msoControlButton)
+        .Caption = "Settings"
+        .Style = msoButtonCaption
+        .OnAction = "ShowSettingsForm"
+        .FaceId = 135
+    End With
+    
+    With myBar.Controls.Add(Type:=msoControlButton)
+        .Caption = "Create Backup"
+        .Style = msoButtonCaption
+        .OnAction = "CreateBackupAction"
+        .FaceId = 19
+    End With
+    
+    myBar.Visible = True
+    On Error GoTo 0
+End Sub
+
+' Helper function to format current sheet
+Public Sub FormatCurrentSheet()
+    Dim ws As Worksheet
+    Set ws = ActiveSheet
+    
+    If MsgBox("Format the active sheet (" & ws.Name & ") as a calendar sheet?", vbQuestion + vbYesNo, "Confirm Format") = vbYes Then
+        FormatCalendarSheet ws
+        MsgBox "Sheet formatted successfully!", vbInformation, "Success"
+    End If
+End Sub
+
+' Helper function to create backup from UI
+Public Sub CreateBackupAction()
+    CreateBackup "Manual"
+    MsgBox "Backup created successfully!", vbInformation, "Success"
+End Sub
+
+' Auto-run when workbook opens
+Public Sub Auto_Open()
+    On Error Resume Next
+    InitializeSystem
+    On Error GoTo 0
+End Sub

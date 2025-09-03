@@ -1,0 +1,111 @@
+
+# Logic and Calculations Behind the EA CSV File
+
+This document explains the purpose, logic, and calculation basis of each column in the EA-compatible `.csv` file used to drive scheduled straddle trades in the MetaTrader 4 Expert Advisor (EA).
+
+---
+
+## 🔄 CSV Execution Flow
+1. The EA checks this file every 30 minutes (`ExecutionCheckSec`).
+2. Each row represents a unique economic event or trade setup.
+3. If the `tradeEnabled` field is `true`, and the current time is within the execution window, the EA evaluates and places a straddle trade.
+
+---
+
+## 📊 Column Descriptions & Logic
+
+### **id**
+- Unique identifier for the event (used for internal tracking, de-duplication, and logging).
+
+### **symbol**
+- Currency pair to be traded (e.g., `EURUSD`).
+
+### **eventName**
+- Name of the economic event or news release (e.g., "ECB Rate Decision").
+
+### **eventType**
+- Type of event (`Event`, `Anticipation-1`, `Anticipation-4`, etc.)
+
+### **impact**
+- Importance level from the calendar: `High`, `Medium`, or `Low`. This may influence SL/TP calculations.
+
+### **tradeEnabled**
+- Must be `true` for the EA to consider executing a trade. If `false`, the row is ignored.
+
+### **entryTimeStr**
+- Exact entry time (formatted as `yyyy.mm.dd hh:mm`) for trade activation.
+
+### **offset**
+- Minutes before/after the event to adjust the execution time.
+  - Example: `-5` = 5 minutes before `entryTimeStr`.
+
+### **entryType**
+- Describes the timing context: `Event`, `Anticipation-1`, etc.
+
+### **slPips**
+- Stop Loss in pips.
+- May be based on event importance or fixed per pair.
+
+### **tpPips**
+- Take Profit in pips.
+- Like SL, it may vary by event or be static.
+
+### **bufferPips**
+- Distance in pips above/below current price to place pending orders.
+
+### **trailingType**
+- Describes trailing logic: `none`, `step`, or `breakeven`.
+
+### **lotInput**
+- Defines position size:
+  - `AUTO` = Calculate based on SL and `RiskPercent`
+  - A number (e.g., `0.1`) = Use fixed lot size
+
+### **winStartStr** / **winEndStr**
+- Start and end times of the valid execution window (formatted like `entryTimeStr`).
+- If the current time is outside this window, trade will not be placed.
+
+### **rawEventTime**
+- Original event time (used for metadata/commenting).
+
+### **magicNumber**
+- Used to tag and track trades.
+- Allows multi-EA setups with non-overlapping logic.
+
+### **strategy**
+- Currently only supports `straddle`.
+- Future strategies (e.g., `limit-fade`) may be added.
+
+### **notes**
+- Human-readable context. Can be used for filtering or explanation.
+
+### **genTimestamp**
+- Timestamp when this row was generated (for diff checking, debugging).
+
+---
+
+## 📐 Key Calculations
+
+### **Lot Size Calculation (if `lotInput` = AUTO)**
+```
+Risk = AccountEquity * (RiskPercent / 100)
+PipValue = Determined from symbol (e.g., $1 per pip for 1.0 lot on EURUSD)
+LotSize = Risk / (SL in pips * PipValue)
+```
+
+### **Execution Check**
+- `Now >= winStartStr` AND `Now <= winEndStr`
+- AND `tradeEnabled = true`
+- AND `strategy = straddle`
+
+---
+
+## 🛠 Customization Recommendations
+- Use Excel/Google Sheets to prep this file.
+- Toggle trades with `tradeEnabled` column.
+- Filter high-impact only for fewer, cleaner setups.
+- Use `notes` and `id` for event traceability.
+
+---
+
+Let me know if you'd like an updated template, or need to support new event types, symbols, or strategy variants!

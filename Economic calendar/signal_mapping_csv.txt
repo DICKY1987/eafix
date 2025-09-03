@@ -1,0 +1,21 @@
+strategyId,parameterSetId,description
+12345,1,RSI Oversold Signal - Use ultra conservative parameters
+12346,2,EMA Crossover - Standard conservative approach
+12347,3,MACD Signal - Moderate risk for trend following
+12348,4,Bollinger Breakout - Moderate aggressive for volatility
+12349,5,Momentum Signal - Aggressive parameters for strong trends
+12350,6,Scalping Signal - Quick in/out with tight stops
+12351,7,Swing Trade Setup - Medium-term position holding
+12352,8,Volatility Breakout - High risk/reward scenarios
+12353,9,News-Based Signal - Conservative for event trading
+12354,10,Strong Confirmation - High risk for very strong signals
+20001,3,AI Pattern Recognition - Moderate parameters
+20002,5,ML Trend Prediction - Aggressive for AI confidence
+20003,2,Neural Network Signal - Conservative approach
+30001,1,Multi-Timeframe Confirm - Ultra safe parameters
+30002,4,Support/Resistance Break - Moderate aggressive
+40001,7,Price Action Signal - Swing trading setup
+40002,6,Reversal Pattern - Scalping parameters
+50001,9,Economic Calendar - News trading approach
+50002,8,High Impact Event - Breakout parameters
+60001,10,Manual Override - Maximum risk allowed

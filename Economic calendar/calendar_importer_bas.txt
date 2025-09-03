@@ -1,0 +1,1050 @@
+' ===================================================================
+' MODULE: calendar_importer.bas
+' SUBSYSTEM: SIGNAL_ENGINE
+' PURPOSE: Economic event data import and processing from CSV files
+' DEPENDENCIES: StandardDataTypes.bas, EventBus.bas, config_manager.bas
+' AUTHOR: System Architect | VERSION: 1.0.0 | LAST MODIFIED: 2024-12-03
+' MQL4 COMPATIBLE: Yes (Simple file operations and CSV parsing)
+' ===================================================================
+Option Explicit
+
+' ═══════════════════════════════════════════════════════════════
+' MODULE CONFIGURATION SECTION
+' ═══════════════════════════════════════════════════════════════
+Private Const MODULE_NAME As String = "calendar_importer"
+Private Const MODULE_VERSION As String = "1.0.0"
+Private Const SUBSYSTEM_NAME As String = "SIGNAL_ENGINE"
+
+' Configuration constants
+Private Const MAX_EVENTS_PER_FILE As Long = 1000
+Private Const MAX_PROCESSED_FILES As Long = 100
+Private Const FILE_SCAN_INTERVAL As Long = 30           ' Scan for new files every 30 seconds
+Private Const EVENT_EXPIRY_HOURS As Long = 24           ' Events expire after 24 hours
+Private Const MAX_FILE_AGE_DAYS As Long = 7             ' Process files up to 7 days old
+
+' Event impact levels
+Private Const HIGH_IMPACT As String = "HIGH"
+Private Const MEDIUM_IMPACT As String = "MEDIUM"
+Private Const LOW_IMPACT As String = "LOW"
+
+' ═══════════════════════════════════════════════════════════════
+' MODULE VARIABLES SECTION
+' ═══════════════════════════════════════════════════════════════
+Private m_isInitialized As Boolean
+Private m_currentStatus As ModuleStatus
+Private m_errorCount As Long
+Private m_lastError As StandardError
+
+' File processing tracking
+Private m_importDirectory As String
+Private m_processedDirectory As String
+Private m_lastScanTime As Date
+Private m_filesProcessed As Long
+Private m_eventsImported As Long
+Private m_eventsRejected As Long
+
+' Economic event storage (MQL4 compatible arrays)
+Private m_economicEvents(1 To MAX_EVENTS_PER_FILE) As EconomicEvent
+Private m_eventCount As Long
+
+' Processed file tracking
+Private m_processedFiles(1 To MAX_PROCESSED_FILES) As ProcessedFileInfo
+Private m_processedFileCount As Long
+
+' ═══════════════════════════════════════════════════════════════
+' INTERNAL DATA STRUCTURES SECTION
+' ═══════════════════════════════════════════════════════════════
+
+' ─────────────────────────────────────────────────────────────
+' EconomicEvent - Economic calendar event structure
+' ─────────────────────────────────────────────────────────────
+Private Type EconomicEvent
+    EventID As String               ' Unique event identifier
+    EventTime As Date               ' When event occurs
+    Currency As String              ' Affected currency (USD, EUR, GBP, etc.)
+    EventName As String             ' Name of economic indicator
+    Impact As String                ' HIGH, MEDIUM, LOW
+    Previous As String              ' Previous value
+    Forecast As String              ' Forecasted value
+    Actual As String                ' Actual value (if available)
+    IsActive As Boolean             ' Whether event is still relevant
+    ImportTime As Date              ' When event was imported
+    SourceFile As String            ' Source CSV file name
+End Type
+
+' ─────────────────────────────────────────────────────────────
+' ProcessedFileInfo - Tracking processed calendar files
+' ─────────────────────────────────────────────────────────────
+Private Type ProcessedFileInfo
+    FileName As String              ' Name of processed file
+    FilePath As String              ' Full file path
+    ProcessTime As Date             ' When file was processed
+    EventCount As Long              ' Number of events in file
+    FileSize As Long                ' File size in bytes
+    IsSuccessful As Boolean         ' Whether processing was successful
+End Type
+
+' ═══════════════════════════════════════════════════════════════
+' STANDARD INTERFACE SECTION (MANDATORY - ALL MODULES)
+' ═══════════════════════════════════════════════════════════════
+
+' ─────────────────────────────────────────────────────────────
+' Initialize - Setup calendar importer for operation
+' ─────────────────────────────────────────────────────────────
+Public Function Initialize() As Boolean
+    LOG_ENTER "Initialize"
+    Dim l_startTime As Double: l_startTime = PERF_START()
+    On Error GoTo ErrorHandler
+    
+    Initialize = False
+    m_currentStatus = INITIALIZING
+    
+    ' ┌─────────────────────────────────────────────────────────────┐
+    ' │ Calendar Importer Initialization                            │
+    ' └─────────────────────────────────────────────────────────────┘
+    
+    ' Load configuration settings
+    If Not LoadConfigurationSettings() Then
+        LOG_CRITICAL "Initialize", "Failed to load configuration settings"
+        m_currentStatus = FATAL_ERROR
+        Exit Function
+    End If
+    
+    ' Validate and create directories
+    If Not ValidateDirectories() Then
+        LOG_CRITICAL "Initialize", "Directory validation failed"
+        m_currentStatus = FATAL_ERROR
+        Exit Function
+    End If
+    
+    ' Initialize event storage arrays
+    InitializeEventArrays
+    
+    ' Initialize processed file tracking
+    InitializeProcessedFileTracking
+    
+    ' Reset performance counters
+    ResetPerformanceCounters
+    
+    ' Mark as initialized
+    m_isInitialized = True
+    m_currentStatus = ACTIVE
+    m_errorCount = 0
+    
+    Initialize = True
+    PERF_END "Initialize", l_startTime
+    LOG_EXIT "Initialize", "SUCCESS - Import dir: " & m_importDirectory
+    Exit Function
+    
+ErrorHandler:
+    LOG_ERR "Initialize"
+    m_currentStatus = FATAL_ERROR
+    Initialize = False
+    PERF_END "Initialize", l_startTime
+    LOG_EXIT "Initialize", "FAILED"
+End Function
+
+' ─────────────────────────────────────────────────────────────
+' Shutdown - Clean shutdown of calendar importer
+' ─────────────────────────────────────────────────────────────
+Public Function Shutdown() As Boolean
+    LOG_ENTER "Shutdown"
+    Dim l_startTime As Double: l_startTime = PERF_START()
+    On Error GoTo ErrorHandler
+    
+    Shutdown = False
+    m_currentStatus = SHUTTING_DOWN
+    
+    ' ┌─────────────────────────────────────────────────────────────┐
+    ' │ Calendar Importer Shutdown                                  │
+    ' └─────────────────────────────────────────────────────────────┘
+    
+    ' Process any remaining files
+    ProcessPendingFiles
+    
+    ' Clear event arrays
+    ClearEventArrays
+    
+    ' Clear processed file tracking
+    ClearProcessedFileTracking
+    
+    ' Mark as shutdown
+    m_isInitialized = False
+    m_currentStatus = SHUTDOWN
+    
+    Shutdown = True
+    PERF_END "Shutdown", l_startTime
+    LOG_EXIT "Shutdown", "SUCCESS"
+    Exit Function
+    
+ErrorHandler:
+    LOG_ERR "Shutdown"
+    m_currentStatus = ERROR_STATE
+    Shutdown = False
+    PERF_END "Shutdown", l_startTime
+    LOG_EXIT "Shutdown", "FAILED"
+End Function
+
+' ─────────────────────────────────────────────────────────────
+' GetModuleStatus - Return current operational status
+' ─────────────────────────────────────────────────────────────
+Public Function GetModuleStatus() As ModuleStatus
+    GetModuleStatus = m_currentStatus
+End Function
+
+' ─────────────────────────────────────────────────────────────
+' GetModuleName - Return module identifier
+' ─────────────────────────────────────────────────────────────
+Public Function GetModuleName() As String
+    GetModuleName = MODULE_NAME
+End Function
+
+' ─────────────────────────────────────────────────────────────
+' GetModuleVersion - Return version information
+' ─────────────────────────────────────────────────────────────
+Public Function GetModuleVersion() As String
+    GetModuleVersion = MODULE_VERSION
+End Function
+
+' ─────────────────────────────────────────────────────────────
+' ProcessHealthCheck - Return detailed health information
+' ─────────────────────────────────────────────────────────────
+Public Function ProcessHealthCheck() As HealthStatus
+    Dim health As HealthStatus
+    health.ComponentName = MODULE_NAME
+    health.Status = m_currentStatus
+    health.LastUpdate = Now
+    health.ErrorCount = m_errorCount
+    health.Performance = CalculateProcessingRate()
+    health.MemoryUsage = CalculateMemoryUsage()
+    health.HealthScore = CalculateHealthScore()
+    health.LastError = m_lastError.Message
+    health.Recovery = "AUTO"
+    health.Notes = "Events: " & m_eventCount & ", Files: " & m_filesProcessed & ", Rejected: " & m_eventsRejected
+    ProcessHealthCheck = health
+End Function
+
+' ─────────────────────────────────────────────────────────────
+' HandleError - Process error from external source
+' ─────────────────────────────────────────────────────────────
+Public Function HandleError(errorInfo As StandardError) As Boolean
+    On Error Resume Next
+    
+    m_errorCount = m_errorCount + 1
+    m_lastError = errorInfo
+    
+    ' Escalate to degraded state if too many errors
+    If m_errorCount > 5 And m_currentStatus = ACTIVE Then
+        m_currentStatus = DEGRADED
+    ElseIf m_errorCount > 20 Then
+        m_currentStatus = ERROR_STATE
+    End If
+    
+    HandleError = True
+End Function
+
+' ═══════════════════════════════════════════════════════════════
+' CORE FUNCTIONALITY SECTION
+' ═══════════════════════════════════════════════════════════════
+
+' ─────────────────────────────────────────────────────────────
+' ProcessCalendarImport - Main processing function
+' ─────────────────────────────────────────────────────────────
+Public Function ProcessCalendarImport() As Boolean
+    LOG_ENTER "ProcessCalendarImport"
+    Dim l_startTime As Double: l_startTime = PERF_START()
+    On Error GoTo ErrorHandler
+    
+    ProcessCalendarImport = False
+    If Not m_isInitialized Then
+        LOG_WARN "ProcessCalendarImport", "Module not initialized"
+        Exit Function
+    End If
+    
+    ' ┌─────────────────────────────────────────────────────────────┐
+    ' │ Calendar Import Processing Cycle                            │
+    ' └─────────────────────────────────────────────────────────────┘
+    
+    ' Check if it's time to scan for new files
+    If DateDiff("s", m_lastScanTime, Now) < FILE_SCAN_INTERVAL Then
+        ProcessCalendarImport = True
+        Exit Function
+    End If
+    
+    ' Scan import directory for new CSV files
+    Dim l_newFiles As String
+    l_newFiles = ScanForNewCalendarFiles()
+    
+    If Len(l_newFiles) = 0 Then
+        LOG_EXIT "ProcessCalendarImport", "NO_NEW_FILES"
+        ProcessCalendarImport = True
+        Exit Function
+    End If
+    
+    ' Process each new file
+    Dim l_filesArray() As String
+    l_filesArray = Split(l_newFiles, "|")
+    
+    Dim i As Long
+    Dim l_successCount As Long
+    l_successCount = 0
+    
+    For i = 0 To UBound(l_filesArray)
+        If Len(l_filesArray(i)) > 0 Then
+            If ProcessSingleCalendarFile(l_filesArray(i)) Then
+                l_successCount = l_successCount + 1
+            End If
+        End If
+    Next i
+    
+    ' Update last scan time
+    m_lastScanTime = Now
+    
+    ProcessCalendarImport = (l_successCount > 0)
+    PERF_END "ProcessCalendarImport", l_startTime
+    LOG_EXIT "ProcessCalendarImport", "SUCCESS - " & l_successCount & " files processed"
+    Exit Function
+    
+ErrorHandler:
+    LOG_ERR "ProcessCalendarImport"
+    ProcessCalendarImport = False
+    PERF_END "ProcessCalendarImport", l_startTime
+    LOG_EXIT "ProcessCalendarImport", "FAILED"
+End Function
+
+' ─────────────────────────────────────────────────────────────
+' GetActiveEconomicEvents - Get currently active events
+' ─────────────────────────────────────────────────────────────
+Public Function GetActiveEconomicEvents() As String
+    LOG_ENTER "GetActiveEconomicEvents"
+    On Error GoTo ErrorHandler
+    
+    GetActiveEconomicEvents = ""
+    If Not m_isInitialized Then Exit Function
+    
+    ' ┌─────────────────────────────────────────────────────────────┐
+    ' │ Active Economic Events Retrieval                            │
+    ' └─────────────────────────────────────────────────────────────┘
+    
+    ' Clean up expired events first
+    CleanupExpiredEvents
+    
+    ' Build comma-separated list of active events
+    Dim l_eventList As String
+    Dim i As Long
+    
+    For i = 1 To m_eventCount
+        With m_economicEvents(i)
+            If .IsActive And .EventTime > Now Then
+                If Len(l_eventList) > 0 Then l_eventList = l_eventList & "|"
+                l_eventList = l_eventList & .EventID & "," & Format(.EventTime, "yyyy-mm-dd hh:nn") & "," & .Currency & "," & .EventName & "," & .Impact
+            End If
+        End With
+    Next i
+    
+    GetActiveEconomicEvents = l_eventList
+    LOG_EXIT "GetActiveEconomicEvents", "SUCCESS - " & CountActiveEvents() & " active events"
+    Exit Function
+    
+ErrorHandler:
+    LOG_ERR "GetActiveEconomicEvents"
+    GetActiveEconomicEvents = ""
+    LOG_EXIT "GetActiveEconomicEvents", "FAILED"
+End Function
+
+' ─────────────────────────────────────────────────────────────
+' GetHighImpactEvents - Get high impact events for next 24 hours
+' ─────────────────────────────────────────────────────────────
+Public Function GetHighImpactEvents() As String
+    LOG_ENTER "GetHighImpactEvents"
+    On Error GoTo ErrorHandler
+    
+    GetHighImpactEvents = ""
+    If Not m_isInitialized Then Exit Function
+    
+    ' ┌─────────────────────────────────────────────────────────────┐
+    ' │ High Impact Events Retrieval                                │
+    ' └─────────────────────────────────────────────────────────────┘
+    
+    Dim l_eventList As String
+    Dim l_cutoffTime As Date
+    l_cutoffTime = DateAdd("h", 24, Now)
+    
+    Dim i As Long
+    For i = 1 To m_eventCount
+        With m_economicEvents(i)
+            If .IsActive And .Impact = HIGH_IMPACT And .EventTime > Now And .EventTime <= l_cutoffTime Then
+                If Len(l_eventList) > 0 Then l_eventList = l_eventList & "|"
+                l_eventList = l_eventList & .EventID & "," & Format(.EventTime, "yyyy-mm-dd hh:nn") & "," & .Currency & "," & .EventName
+            End If
+        End With
+    Next i
+    
+    GetHighImpactEvents = l_eventList
+    LOG_EXIT "GetHighImpactEvents", "SUCCESS - " & CountHighImpactEvents() & " high impact events"
+    Exit Function
+    
+ErrorHandler:
+    LOG_ERR "GetHighImpactEvents"
+    GetHighImpactEvents = ""
+    LOG_EXIT "GetHighImpactEvents", "FAILED"
+End Function
+
+' ═══════════════════════════════════════════════════════════════
+' PRIVATE HELPER SECTION
+' ═══════════════════════════════════════════════════════════════
+
+' ─────────────────────────────────────────────────────────────
+' Configuration and Initialization Functions
+' ─────────────────────────────────────────────────────────────
+Private Function LoadConfigurationSettings() As Boolean
+    On Error GoTo ErrorHandler
+    
+    LoadConfigurationSettings = False
+    
+    ' Load directory paths from configuration
+    m_importDirectory = config_manager.GetConfigValue("CALENDAR", "IMPORT_DIRECTORY")
+    If Len(m_importDirectory) = 0 Then
+        m_importDirectory = "C:\TradingSystem\calendar_import\"
+    End If
+    
+    m_processedDirectory = config_manager.GetConfigValue("CALENDAR", "PROCESSED_DIRECTORY")
+    If Len(m_processedDirectory) = 0 Then
+        m_processedDirectory = "C:\TradingSystem\calendar_processed\"
+    End If
+    
+    LoadConfigurationSettings = True
+    Exit Function
+    
+ErrorHandler:
+    LoadConfigurationSettings = False
+End Function
+
+Private Function ValidateDirectories() As Boolean
+    On Error GoTo ErrorHandler
+    
+    ValidateDirectories = False
+    
+    ' Check if import directory exists, create if needed
+    If Not DirExists(m_importDirectory) Then
+        If Not CreateDirectory(m_importDirectory) Then
+            LOG_CRITICAL "ValidateDirectories", "Cannot create import directory: " & m_importDirectory
+            Exit Function
+        End If
+    End If
+    
+    ' Check if processed directory exists, create if needed
+    If Not DirExists(m_processedDirectory) Then
+        If Not CreateDirectory(m_processedDirectory) Then
+            LOG_CRITICAL "ValidateDirectories", "Cannot create processed directory: " & m_processedDirectory
+            Exit Function
+        End If
+    End If
+    
+    ValidateDirectories = True
+    Exit Function
+    
+ErrorHandler:
+    ValidateDirectories = False
+End Function
+
+Private Function DirExists(dirPath As String) As Boolean
+    On Error Resume Next
+    DirExists = (Dir(dirPath, 16) <> "")
+End Function
+
+Private Function CreateDirectory(dirPath As String) As Boolean
+    On Error GoTo ErrorHandler
+    
+    CreateDirectory = False
+    MkDir dirPath
+    CreateDirectory = True
+    Exit Function
+    
+ErrorHandler:
+    CreateDirectory = False
+End Function
+
+' ─────────────────────────────────────────────────────────────
+' File Processing Functions
+' ─────────────────────────────────────────────────────────────
+Private Function ScanForNewCalendarFiles() As String
+    On Error GoTo ErrorHandler
+    
+    ScanForNewCalendarFiles = ""
+    
+    ' Get list of CSV files in import directory
+    Dim l_fileName As String
+    Dim l_filePath As String
+    Dim l_fileList As String
+    
+    l_fileName = Dir(m_importDirectory & "*.csv")
+    
+    Do While Len(l_fileName) > 0
+        l_filePath = m_importDirectory & l_fileName
+        
+        ' Check if file was already processed
+        If Not IsFileAlreadyProcessed(l_fileName) Then
+            ' Check file age
+            If IsFileWithinAgeLimit(l_filePath) Then
+                If Len(l_fileList) > 0 Then l_fileList = l_fileList & "|"
+                l_fileList = l_fileList & l_fileName
+            End If
+        End If
+        
+        l_fileName = Dir
+    Loop
+    
+    ScanForNewCalendarFiles = l_fileList
+    Exit Function
+    
+ErrorHandler:
+    ScanForNewCalendarFiles = ""
+End Function
+
+Private Function ProcessSingleCalendarFile(fileName As String) As Boolean
+    LOG_ENTER "ProcessSingleCalendarFile"
+    On Error GoTo ErrorHandler
+    
+    ProcessSingleCalendarFile = False
+    
+    Dim l_filePath As String
+    l_filePath = m_importDirectory & fileName
+    
+    ' ┌─────────────────────────────────────────────────────────────┐
+    ' │ Single Calendar File Processing                             │
+    ' └─────────────────────────────────────────────────────────────┘
+    
+    ' Validate file exists and is readable
+    If Not FileExists(l_filePath) Then
+        LOG_WARN "ProcessSingleCalendarFile", "File not found: " & l_filePath
+        Exit Function
+    End If
+    
+    ' Open and read CSV file
+    Dim l_fileContent As String
+    l_fileContent = ReadFileContent(l_filePath)
+    
+    If Len(l_fileContent) = 0 Then
+        LOG_WARN "ProcessSingleCalendarFile", "Empty or unreadable file: " & fileName
+        Exit Function
+    End If
+    
+    ' Parse CSV content and extract events
+    Dim l_eventsExtracted As Long
+    l_eventsExtracted = ParseCalendarCSV(l_fileContent, fileName)
+    
+    If l_eventsExtracted > 0 Then
+        ' Move file to processed directory
+        MoveFileToProcessed l_filePath, fileName
+        
+        ' Record file processing
+        RecordProcessedFile fileName, l_filePath, l_eventsExtracted, True
+        
+        ' Update counters
+        m_filesProcessed = m_filesProcessed + 1
+        m_eventsImported = m_eventsImported + l_eventsExtracted
+        
+        ' Publish event notification
+        PublishCalendarImportEvent fileName, l_eventsExtracted
+        
+        ProcessSingleCalendarFile = True
+    Else
+        LOG_WARN "ProcessSingleCalendarFile", "No valid events extracted from: " & fileName
+        RecordProcessedFile fileName, l_filePath, 0, False
+    End If
+    
+    LOG_EXIT "ProcessSingleCalendarFile", "SUCCESS - " & l_eventsExtracted & " events"
+    Exit Function
+    
+ErrorHandler:
+    LOG_ERR "ProcessSingleCalendarFile", "Failed to process: " & fileName
+    RecordProcessedFile fileName, l_filePath, 0, False
+    ProcessSingleCalendarFile = False
+    LOG_EXIT "ProcessSingleCalendarFile", "FAILED"
+End Function
+
+Private Function ParseCalendarCSV(fileContent As String, sourceFile As String) As Long
+    On Error GoTo ErrorHandler
+    
+    ParseCalendarCSV = 0
+    
+    ' Split content into lines
+    Dim l_lines() As String
+    l_lines = Split(fileContent, vbCrLf)
+    
+    If UBound(l_lines) < 1 Then Exit Function ' No data lines
+    
+    ' Skip header line, process data lines
+    Dim i As Long
+    Dim l_eventsAdded As Long
+    l_eventsAdded = 0
+    
+    For i = 1 To UBound(l_lines)
+        If Len(l_lines(i)) > 0 Then
+            If ParseCalendarEventLine(l_lines(i), sourceFile) Then
+                l_eventsAdded = l_eventsAdded + 1
+            End If
+        End If
+        
+        ' Prevent array overflow
+        If m_eventCount >= MAX_EVENTS_PER_FILE Then Exit For
+    Next i
+    
+    ParseCalendarCSV = l_eventsAdded
+    Exit Function
+    
+ErrorHandler:
+    ParseCalendarCSV = 0
+End Function
+
+Private Function ParseCalendarEventLine(csvLine As String, sourceFile As String) As Boolean
+    On Error GoTo ErrorHandler
+    
+    ParseCalendarEventLine = False
+    
+    ' Parse CSV line: DateTime,Currency,EventName,Impact,Previous,Forecast,Actual
+    Dim l_fields() As String
+    l_fields = Split(csvLine, ",")
+    
+    If UBound(l_fields) < 6 Then Exit Function ' Not enough fields
+    
+    ' Create new economic event
+    Dim l_newEvent As EconomicEvent
+    
+    ' Parse and validate fields
+    If Not ParseEventDateTime(l_fields(0), l_newEvent.EventTime) Then Exit Function
+    
+    l_newEvent.Currency = Trim(l_fields(1))
+    If Len(l_newEvent.Currency) <> 3 Then Exit Function ' Invalid currency code
+    
+    l_newEvent.EventName = Trim(l_fields(2))
+    If Len(l_newEvent.EventName) = 0 Then Exit Function
+    
+    l_newEvent.Impact = UCase(Trim(l_fields(3)))
+    If l_newEvent.Impact <> HIGH_IMPACT And l_newEvent.Impact <> MEDIUM_IMPACT And l_newEvent.Impact <> LOW_IMPACT Then
+        l_newEvent.Impact = LOW_IMPACT ' Default to low impact
+    End If
+    
+    l_newEvent.Previous = Trim(l_fields(4))
+    l_newEvent.Forecast = Trim(l_fields(5))
+    l_newEvent.Actual = Trim(l_fields(6))
+    
+    ' Set metadata
+    l_newEvent.EventID = GenerateEventID()
+    l_newEvent.IsActive = True
+    l_newEvent.ImportTime = Now
+    l_newEvent.SourceFile = sourceFile
+    
+    ' Validate event is not in the past (allow some tolerance)
+    If l_newEvent.EventTime < DateAdd("n", -30, Now) Then Exit Function
+    
+    ' Add to events array
+    If m_eventCount < MAX_EVENTS_PER_FILE Then
+        m_eventCount = m_eventCount + 1
+        m_economicEvents(m_eventCount) = l_newEvent
+        ParseCalendarEventLine = True
+    End If
+    
+    Exit Function
+    
+ErrorHandler:
+    ParseCalendarEventLine = False
+End Function
+
+Private Function ParseEventDateTime(dateTimeStr As String, ByRef eventDateTime As Date) As Boolean
+    On Error GoTo ErrorHandler
+    
+    ParseEventDateTime = False
+    
+    ' Try various date/time formats
+    ' Format 1: yyyy-mm-dd hh:nn
+    If InStr(dateTimeStr, "-") > 0 And InStr(dateTimeStr, ":") > 0 Then
+        eventDateTime = CDate(dateTimeStr)
+        ParseEventDateTime = True
+        Exit Function
+    End If
+    
+    ' Format 2: mm/dd/yyyy hh:nn
+    If InStr(dateTimeStr, "/") > 0 And InStr(dateTimeStr, ":") > 0 Then
+        eventDateTime = CDate(dateTimeStr)
+        ParseEventDateTime = True
+        Exit Function
+    End If
+    
+    ' Format 3: dd.mm.yyyy hh:nn
+    If InStr(dateTimeStr, ".") > 0 And InStr(dateTimeStr, ":") > 0 Then
+        ' Convert dots to slashes and parse
+        Dim l_convertedDate As String
+        l_convertedDate = Replace(dateTimeStr, ".", "/")
+        eventDateTime = CDate(l_convertedDate)
+        ParseEventDateTime = True
+        Exit Function
+    End If
+    
+    Exit Function
+    
+ErrorHandler:
+    ParseEventDateTime = False
+End Function
+
+' ─────────────────────────────────────────────────────────────
+' File Management Functions
+' ─────────────────────────────────────────────────────────────
+Private Function FileExists(filePath As String) As Boolean
+    On Error Resume Next
+    FileExists = (Dir(filePath) <> "")
+End Function
+
+Private Function ReadFileContent(filePath As String) As String
+    On Error GoTo ErrorHandler
+    
+    ReadFileContent = ""
+    
+    Dim l_fileNumber As Integer
+    l_fileNumber = FreeFile
+    
+    Open filePath For Input As #l_fileNumber
+    ReadFileContent = Input(LOF(l_fileNumber), l_fileNumber)
+    Close #l_fileNumber
+    
+    Exit Function
+    
+ErrorHandler:
+    If l_fileNumber > 0 Then Close #l_fileNumber
+    ReadFileContent = ""
+End Function
+
+Private Sub MoveFileToProcessed(sourceFilePath As String, fileName As String)
+    On Error Resume Next
+    
+    Dim l_destinationPath As String
+    l_destinationPath = m_processedDirectory & fileName
+    
+    ' Move file to processed directory
+    Name sourceFilePath As l_destinationPath
+End Sub
+
+Private Function IsFileAlreadyProcessed(fileName As String) As Boolean
+    IsFileAlreadyProcessed = False
+    
+    Dim i As Long
+    For i = 1 To m_processedFileCount
+        If m_processedFiles(i).FileName = fileName Then
+            IsFileAlreadyProcessed = True
+            Exit Function
+        End If
+    Next i
+End Function
+
+Private Function IsFileWithinAgeLimit(filePath As String) As Boolean
+    On Error GoTo ErrorHandler
+    
+    IsFileWithinAgeLimit = False
+    
+    Dim l_fileDate As Date
+    l_fileDate = FileDateTime(filePath)
+    
+    If DateDiff("d", l_fileDate, Now) <= MAX_FILE_AGE_DAYS Then
+        IsFileWithinAgeLimit = True
+    End If
+    
+    Exit Function
+    
+ErrorHandler:
+    IsFileWithinAgeLimit = False
+End Function
+
+' ─────────────────────────────────────────────────────────────
+' Array Management Functions
+' ─────────────────────────────────────────────────────────────
+Private Sub InitializeEventArrays()
+    Dim i As Long
+    For i = 1 To MAX_EVENTS_PER_FILE
+        ClearEventArrayItem i
+    Next i
+    m_eventCount = 0
+End Sub
+
+Private Sub ClearEventArrays()
+    InitializeEventArrays
+End Sub
+
+Private Sub ClearEventArrayItem(index As Long)
+    With m_economicEvents(index)
+        .EventID = ""
+        .EventTime = 0
+        .Currency = ""
+        .EventName = ""
+        .Impact = ""
+        .Previous = ""
+        .Forecast = ""
+        .Actual = ""
+        .IsActive = False
+        .ImportTime = 0
+        .SourceFile = ""
+    End With
+End Sub
+
+Private Sub InitializeProcessedFileTracking()
+    Dim i As Long
+    For i = 1 To MAX_PROCESSED_FILES
+        ClearProcessedFileItem i
+    Next i
+    m_processedFileCount = 0
+End Sub
+
+Private Sub ClearProcessedFileTracking()
+    InitializeProcessedFileTracking
+End Sub
+
+Private Sub ClearProcessedFileItem(index As Long)
+    With m_processedFiles(index)
+        .FileName = ""
+        .FilePath = ""
+        .ProcessTime = 0
+        .EventCount = 0
+        .FileSize = 0
+        .IsSuccessful = False
+    End With
+End Sub
+
+Private Sub RecordProcessedFile(fileName As String, filePath As String, eventCount As Long, isSuccessful As Boolean)
+    If m_processedFileCount >= MAX_PROCESSED_FILES Then Exit Sub
+    
+    m_processedFileCount = m_processedFileCount + 1
+    With m_processedFiles(m_processedFileCount)
+        .FileName = fileName
+        .FilePath = filePath
+        .ProcessTime = Now
+        .EventCount = eventCount
+        .FileSize = GetFileSize(filePath)
+        .IsSuccessful = isSuccessful
+    End With
+End Sub
+
+Private Function GetFileSize(filePath As String) As Long
+    On Error Resume Next
+    GetFileSize = FileLen(filePath)
+End Function
+
+' ─────────────────────────────────────────────────────────────
+' Event Management Functions
+' ─────────────────────────────────────────────────────────────
+Private Sub CleanupExpiredEvents()
+    Dim i As Long
+    Dim l_expiredCount As Long
+    l_expiredCount = 0
+    
+    For i = 1 To m_eventCount
+        With m_economicEvents(i)
+            If .IsActive And .EventTime < DateAdd("h", -EVENT_EXPIRY_HOURS, Now) Then
+                .IsActive = False
+                l_expiredCount = l_expiredCount + 1
+            End If
+        End With
+    Next i
+    
+    If l_expiredCount > 0 Then
+        LOG_WARN "CleanupExpiredEvents", "Deactivated " & l_expiredCount & " expired events"
+    End If
+End Sub
+
+Private Function CountActiveEvents() As Long
+    CountActiveEvents = 0
+    
+    Dim i As Long
+    For i = 1 To m_eventCount
+        If m_economicEvents(i).IsActive And m_economicEvents(i).EventTime > Now Then
+            CountActiveEvents = CountActiveEvents + 1
+        End If
+    Next i
+End Function
+
+Private Function CountHighImpactEvents() As Long
+    CountHighImpactEvents = 0
+    
+    Dim l_cutoffTime As Date
+    l_cutoffTime = DateAdd("h", 24, Now)
+    
+    Dim i As Long
+    For i = 1 To m_eventCount
+        With m_economicEvents(i)
+            If .IsActive And .Impact = HIGH_IMPACT And .EventTime > Now And .EventTime <= l_cutoffTime Then
+                CountHighImpactEvents = CountHighImpactEvents + 1
+            End If
+        End With
+    Next i
+End Function
+
+Private Function GenerateEventID() As String
+    GenerateEventID = "EVT_" & Format(Now, "yyyymmddhhnnss") & "_" & Format(Int(Rnd * 1000), "000")
+End Function
+
+Private Sub ProcessPendingFiles()
+    ' Process any pending files during shutdown (limited processing)
+    Dim l_pendingFiles As String
+    l_pendingFiles = ScanForNewCalendarFiles()
+    
+    If Len(l_pendingFiles) > 0 Then
+        Dim l_filesArray() As String
+        l_filesArray = Split(l_pendingFiles, "|")
+        
+        ' Process only first few files during shutdown
+        Dim i As Long
+        For i = 0 To Application.Min(UBound(l_filesArray), 2)
+            If Len(l_filesArray(i)) > 0 Then
+                ProcessSingleCalendarFile l_filesArray(i)
+            End If
+        Next i
+    End If
+End Sub
+
+' ─────────────────────────────────────────────────────────────
+' Event Publishing Functions
+' ─────────────────────────────────────────────────────────────
+Private Sub PublishCalendarImportEvent(fileName As String, eventCount As Long)
+    On Error Resume Next
+    
+    ' Create event data
+    Dim eventData As StandardEventData
+    eventData.EventType = "NOTIFICATION"
+    eventData.SourceModule = MODULE_NAME
+    eventData.Data = "FILE=" & fileName & ",EVENTS=" & CStr(eventCount)
+    eventData.Priority = 3
+    
+    ' Publish via EventBus (if available)
+    ' EventBus.PublishEvent "CALENDAR_IMPORTED", eventData
+End Sub
+
+' ─────────────────────────────────────────────────────────────
+' Performance and Health Functions
+' ─────────────────────────────────────────────────────────────
+Private Function CalculateProcessingRate() As Double
+    ' Calculate events processed per minute
+    If m_filesProcessed > 0 Then
+        Dim l_processingTime As Double
+        l_processingTime = DateDiff("n", m_lastScanTime, Now)
+        If l_processingTime > 0 Then
+            CalculateProcessingRate = CDbl(m_eventsImported) / l_processingTime
+        End If
+    End If
+End Function
+
+Private Function CalculateMemoryUsage() As Long
+    CalculateMemoryUsage = (m_eventCount * 150) + (m_processedFileCount * 100) ' Rough estimate
+End Function
+
+Private Function CalculateHealthScore() As Long
+    Dim score As Long
+    score = 100
+    
+    ' Reduce score based on error rate
+    If m_errorCount > 3 Then score = score - 20
+    If m_errorCount > 10 Then score = score - 30
+    
+    ' Reduce score based on rejection rate
+    If m_eventsImported > 0 Then
+        Dim l_rejectionRate As Double
+        l_rejectionRate = CDbl(m_eventsRejected) / CDbl(m_eventsImported + m_eventsRejected)
+        If l_rejectionRate > 0.2 Then score = score - 15
+        If l_rejectionRate > 0.5 Then score = score - 25
+    End If
+    
+    ' Reduce score if status is not active
+    If m_currentStatus <> ACTIVE Then score = score - 50
+    
+    If score < 0 Then score = 0
+    CalculateHealthScore = score
+End Function
+
+Private Sub ResetPerformanceCounters()
+    m_filesProcessed = 0
+    m_eventsImported = 0
+    m_eventsRejected = 0
+    m_lastScanTime = 0
+End Sub
+
+' ─────────────────────────────────────────────────────────────
+' Error Creation Helper
+' ─────────────────────────────────────────────────────────────
+Private Function CreateError(severity As String, category As String, message As String) As StandardError
+    Dim errorInfo As StandardError
+    errorInfo.ErrorID = GenerateErrorID()
+    errorInfo.Timestamp = Now
+    errorInfo.Severity = severity
+    errorInfo.Category = category
+    errorInfo.Message = message
+    errorInfo.ModuleName = MODULE_NAME
+    errorInfo.SubsystemName = SUBSYSTEM_NAME
+    errorInfo.IsRecoverable = True
+    errorInfo.RequiresUserAction = False
+    errorInfo.ResolutionStatus = "OPEN"
+    CreateError = errorInfo
+End Function
+
+' ═══════════════════════════════════════════════════════════════
+' LOGGING INTEGRATION SECTION (MANDATORY)
+' ═══════════════════════════════════════════════════════════════
+
+Private Sub LOG_ENTER(functionName As String)
+    Debug.Print "[" & MODULE_NAME & "] ENTER: " & functionName
+End Sub
+
+Private Sub LOG_EXIT(functionName As String, Optional result As String = "")
+    Debug.Print "[" & MODULE_NAME & "] EXIT: " & functionName & " " & result
+End Sub
+
+Private Sub LOG_ERR(functionName As String, Optional customMessage As String = "")
+    Dim l_message As String
+    If Len(customMessage) > 0 Then
+        l_message = customMessage & " | VBA Error: " & Err.Description
+    Else
+        l_message = Err.Description
+    End If
+    Debug.Print "[" & MODULE_NAME & "] ERROR: " & functionName & " - " & l_message
+End Sub
+
+Private Sub LOG_WARN(functionName As String, warningMessage As String)
+    Debug.Print "[" & MODULE_NAME & "] WARN: " & functionName & " - " & warningMessage
+End Sub
+
+Private Sub LOG_CRITICAL(functionName As String, criticalMessage As String)
+    Debug.Print "[" & MODULE_NAME & "] CRITICAL: " & functionName & " - " & criticalMessage
+End Sub
+
+Private Function PERF_START() As Double
+    PERF_START = Timer
+End Function
+
+Private Sub PERF_END(functionName As String, startTime As Double)
+    Dim l_executionTime As Long
+    l_executionTime = (Timer - startTime) * 1000
+    Debug.Print "[" & MODULE_NAME & "] PERF: " & functionName & " - " & l_executionTime & "ms"
+End Sub
+
+' ═══════════════════════════════════════════════════════════════
+' PUBLIC UTILITY FUNCTIONS
+' ═══════════════════════════════════════════════════════════════
+
+' ─────────────────────────────────────────────────────────────
+' GetCalendarStatistics - Return current statistics
+' ─────────────────────────────────────────────────────────────
+Public Function GetCalendarStatistics() As String
+    Dim stats As String
+    stats = "Calendar Importer Statistics:" & vbCrLf
+    stats = stats & "  Status: " & ModuleStatusToString(m_currentStatus) & vbCrLf
+    stats = stats & "  Active Events: " & CountActiveEvents() & "/" & m_eventCount & vbCrLf
+    stats = stats & "  High Impact Events (24h): " & CountHighImpactEvents() & vbCrLf
+    stats = stats & "  Files Processed: " & m_filesProcessed & vbCrLf
+    stats = stats & "  Events Imported: " & m_eventsImported & vbCrLf
+    stats = stats & "  Events Rejected: " & m_eventsRejected & vbCrLf
+    stats = stats & "  Processing Rate: " & Format(CalculateProcessingRate(), "0.0") & " events/min" & vbCrLf
+    stats = stats & "  Last Scan: " & Format(m_lastScanTime, "yyyy-mm-dd hh:nn:ss") & vbCrLf
+    stats = stats & "  Import Directory: " & m_importDirectory
+    GetCalendarStatistics = stats
+End Function
+
+' ═══════════════════════════════════════════════════════════════
+' END OF MODULE: calendar_importer.bas
+' ═══════════════════════════════════════════════════════════════
