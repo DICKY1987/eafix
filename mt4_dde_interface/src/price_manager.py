@@ -5,7 +5,7 @@ import threading
 import time
 from collections import deque, defaultdict
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable
 import logging
 import numpy as np
 from dataclasses import dataclass
@@ -182,12 +182,37 @@ class PriceManager:
         self.symbol_stats = defaultdict(dict)
         self.lock = threading.RLock()
         self.logger = logging.getLogger(__name__)
-        
+
         # Performance tracking
         self.total_ticks_received = 0
         self.ticks_per_symbol = defaultdict(int)
         self.last_cleanup = datetime.now()
         self.cleanup_interval = timedelta(hours=1)
+
+        # Callback management for price updates
+        self._callbacks: List[Callable[[PriceTick], None]] = []
+
+    def add_callback(self, callback: Callable[[PriceTick], None]):
+        """Register a callback to receive price ticks"""
+        with self.lock:
+            if callback not in self._callbacks:
+                self._callbacks.append(callback)
+
+    def remove_callback(self, callback: Callable[[PriceTick], None]):
+        """Remove a previously registered callback"""
+        with self.lock:
+            if callback in self._callbacks:
+                self._callbacks.remove(callback)
+
+    def _notify_callbacks(self, tick: PriceTick):
+        """Notify all registered callbacks of a new tick"""
+        # Make a snapshot of callbacks to avoid modification during iteration
+        callbacks = list(self._callbacks)
+        for cb in callbacks:
+            try:
+                cb(tick)
+            except Exception as e:
+                self.logger.error(f"Error in price callback: {e}")
     
     def add_price_tick(self, symbol: str, price_data: Dict) -> bool:
         """
@@ -232,7 +257,10 @@ class PriceManager:
                 # Periodic cleanup
                 if datetime.now() - self.last_cleanup > self.cleanup_interval:
                     self.cleanup_old_data()
-            
+
+            # Notify listeners outside lock to avoid potential deadlocks
+            self._notify_callbacks(tick)
+
             return True
             
         except Exception as e:
