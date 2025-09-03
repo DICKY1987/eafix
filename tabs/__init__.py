@@ -7,10 +7,12 @@ from .live_dashboard import LiveDashboard
 from .trade_history import TradeHistory
 from .system_status import SystemStatus as SystemStatusTab
 from .settings_panel import SettingsPanel
+from .matrix_parameters import MatrixParametersTab
 
 __all__ = [
     'LiveDashboard',
-    'TradeHistory', 
+    'TradeHistory',
     'SystemStatusTab',
-    'SettingsPanel'
+    'SettingsPanel',
+    'MatrixParametersTab'
 ]
