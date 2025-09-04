@@ -1,12 +1,24 @@
+import logging
+
 try:
-    from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QDockWidget, QWidget, QVBoxLayout
+    from PySide6.QtWidgets import (
+        QApplication,
+        QMainWindow,
+        QLabel,
+        QDockWidget,
+        QWidget,
+        QVBoxLayout,
+    )
 except Exception:
     QApplication = None
     QMainWindow = object
 
-def launch_ui():
+logger = logging.getLogger(__name__)
+
+
+def launch_ui() -> None:
     if QApplication is None:
-        print("PySide6 is not installed. Install PySide6 to run the desktop app.")
+        logger.error("PySide6 is not installed. Install PySide6 to run the desktop app.")
         return
     app = QApplication([])
     win = QMainWindow()
