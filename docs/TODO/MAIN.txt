@@ -1,0 +1,381 @@
+Main Task: Enforce Current System Architecture & De-Scope Excel
+
+Sub-task: Remove all Excel/VBA references and code paths.
+
+Constraint: System is Python↔MT4 only; no Excel UI, exports, or dependencies.
+
+Required Output: Purge or gate any Excel-specific modules and doc references; update master specs to reflect “no Excel” architecture.
+
+Sub-task: Use a single Execution Engine EA (one binary), multi-instance (one per symbol).
+
+Constraint: Each symbol runs the same EA configured per-instance; no symbol-specific EA forks.
+
+Required Output: Documents and configs reflect this pattern; deprecate “30 EA Pair” concept everywhere.
+
+Sub-task: Standardize MT4↔Python communication.
+
+Constraint: Three-tier failover pattern (Socket DLL → Named Pipes → CSV) remains; MT4 stays thin; Python holds business logic.
+
+Required Format: Normalized JSON message schema for signals (see Friday signal schema below) transported over chosen bridge.
+
+Main Task: Integrate Friday 07:30→14:00 America/Chicago Volatility Signal (Python-First, EA-Thin)
+
+Sub-task: Add the signal module to Python.
+
+Constraint: Use timezone-aware (America/Chicago) window; trigger only once per Friday after 14:00 local; percent move threshold configurable.
+
+Required Output: Add signals/friday_vol_signal.py (already created) with class FridayVolSignal and FridayVolSignalConfig.
+
+Sub-task: Wire into the indicator loop.
+
+Constraint: Do not compute in MT4; Python evaluates and emits a normalized “EXECUTE” message; avoid re-fires same Friday per symbol.
+
+Required Format: In indicator_engine.py, instantiate and poll:
+
+FridayVolSignalConfig(percent_threshold, start_local_hhmm="07:30", end_local_hhmm="14:00")
+
+Call evaluate(symbol, get_price_at=nearest_price_at_utc)
+
+Sub-task: Provide a reliable price accessor at precise UTC instants.
+
+Constraint: nearest_price_at_utc(symbol, dt) returns last known price at or before dt; if using bars, use open at 07:30 and close at 14:00.
+
+Required Output: Implement accessor on top of DDE/tick cache (e.g., in price_manager.py).
+
+Sub-task: Send normalized execution messages to MT4.
+
+Constraint: Transport-agnostic; use existing bridge; MT4 must not recompute the signal.
+
+Required Format/Data (JSON message schema):
+
+type: "EXECUTE"
+
+source: "Signal.FridayMove"
+
+symbol: "<e.g., EURUSD>"
+
+direction: "BUY"|"SELL"
+
+strength: <float percent change>
+
+risk_profile: "FRIDAY_VOL_EDGE_V1"
+
+ttl_sec: 300
+
+meta: { window_local: "07:30→14:00 America/Chicago", pct_change: <float>, p_start: <float>, p_end: <float> }
+
+Sub-task: Keep EA thin and idempotent.
+
+Constraint: On receiving type=="EXECUTE", EA calls ExecuteOrder(direction, risk_profile); do not re-trigger on the same signal payload.
+
+Required Output: EA inbox poll + minimal JSON/CSV parse and dispatch to existing order logic.
+
+Sub-task: Configuration surface.
+
+Constraint: Enable/disable and thresholds are driven through settings.json.
+
+Required Data (overlay block):
+
+{
+  "signals": {
+    "FridayMove": {
+      "enabled": true,
+      "percent_threshold": 1.0,
+      "start_local": "07:30",
+      "end_local": "14:00",
+      "risk_profile": "FRIDAY_VOL_EDGE_V1"
+    }
+  }
+}
+
+
+Sub-task: Unit tests.
+
+Constraint: Deterministic tests for Friday after 14:00 vs before; threshold pass/fail; once-only guard; DST boundary sanity.
+
+Required Output: tests/test_friday_vol_signal.py (already created) covers ≥1 pass case and ≥1 fail case (threshold).
+
+Main Task: DDE-Fed Indicator System & Currency Strength Panel
+
+Sub-task: Ingest DDE/MT4 prices into Python as the central feed.
+
+Constraint: DDE acts as main price feed to drive indicators/signals; ensure robust connection handling and fallbacks.
+
+Required Output: Connection management and error handling in dde_client.py / price_manager.py; health checks (see Guardian).
+
+Sub-task: Compute percent change windows per pair.
+
+Constraint: For each imported pair compute % change over these rolling windows: 15 minutes, 1 hour, 4 hours, 8 hours, 12 hours, 24 hours.
+
+Required Output: Functions producing %Δ for each window per symbol; persisted for UI and signals use.
+
+Sub-task: Compute currency strength indicator.
+
+Constraint: Aggregate per-currency strength from pair changes; must expose both per-pair %Δ and per-currency strength.
+
+Required Output: Currency strength engine (readable by GUI and signals); display both pair and currency-level values.
+
+Sub-task: Expose in GUI.
+
+Constraint: Add a new Indicators/Signals tab with live tiles or table: per-pair %Δ (15m/1h/4h/8h/12h/24h) and per-currency strength.
+
+Required Output: Update main_tab.py + ui_components.py to render values; add tooltips with calculation definitions.
+
+Sub-task: Tests.
+
+Constraint: Deterministic fixtures over known price series for each time window; verify exact %Δ and currency strength aggregations.
+
+Required Output: Extend test_indicators.py accordingly.
+
+Main Task: Conditional Probability Momentum Scanner (“Conditional Edge”)
+
+Sub-task: Define trigger/target grids.
+
+Constraint: Use the initial grid guidance: M∈{10,15}, W∈{10,15}, K∈{15,25}, T∈{60,180} (as provided in prior guidance).
+
+Required Output: A param table describing each grid combo and definitions for M, W, K, T; store in JSON/YAML.
+
+Sub-task: Historical scan.
+
+Constraint: Run on 6–12 months of M1 data per symbol; require n≥200 occurrences per (M,W,K,T) cell to rank reliably.
+
+Required Output: For each grid cell compute p = P(move K pips in same direction within T minutes | initial M-pip move within W minutes); persist results per symbol.
+
+Sub-task: Ranking and selection.
+
+Constraint: Rank by p and keep the top 10–20 rows per symbol meeting n≥200.
+
+Required Output: A per-symbol “Top Conditional Edges” dataset for live use.
+
+Sub-task: Live matching + GUI panel.
+
+Constraint: Add a UI “Conditional Edge” panel that shows the best-matching historical row for the current state.
+
+Required Output: Real-time matcher using the current micro-move → suggests bias/direction with confidence; clearly display p, n, and parameters.
+
+Main Task: Derivative Expiry Impact System (“Expiry Scraper” + Signals)
+
+Sub-task: Define data model & ingestion.
+
+Constraint: The user asked “where are you scraping the data from?”—sources must be explicitly identified and documented before scraping.
+
+Required Output: A sources.md enumerating each chosen public source for FX-linked options/derivatives expiries (fields: instrument, notional, strikes, expiry date/time, symbol mapping, disclaimer). Do not proceed to scrape until enumerated/approved.
+
+Sub-task: Pluggable scraper & normalizer.
+
+Constraint: Build modular scrapers with per-source adapters; normalize into a single schema.
+
+Required Format/Data: Normalized record fields include {symbol, strike, notional, expiry_ts_utc, venue/source, notes}.
+
+Sub-task: Signal logic around expiry microstructure.
+
+Constraint: Incorporate “pinning to strikes” into pre-expiry watchlist and “post-expiry unwind” into a post-window volatility watch; keep logic in Python.
+
+Required Output: Two signals:
+
+Pre-Expiry Pinning Watch (bias suppression/direction stall near large OI strikes),
+
+Post-Expiry Vol Spike Watch (release of hedging flows).
+
+Sub-task: GUI & timeline overlays.
+
+Constraint: Visualize upcoming expiries per symbol; mark candidate pinning levels and post-expiry windows.
+
+Required Output: UI timeline/list + chart overlays; tooltips indicate source, notional (if available), strike, and time to expiry.
+
+Sub-task: Tests.
+
+Constraint: Unit tests for adapter normalization and for signal triggers against synthetic expiry calendars.
+
+Required Output: Test fixtures per source and scenario.
+
+Main Task: Guardian / Self-Healing System (Constraint-Based)
+
+Sub-task: Replace static health checks with a constraint repository.
+
+Constraint: Central TradingConstraintRepository backed by SQLite; constraints queryable by context (component, severity, auto-action).
+
+Required Output: Repository module with CRUD + query; seed trading-specific constraints.
+
+Sub-task: Observability foundation.
+
+Constraint: Collect system vitals (CPU/mem/disk/net), app metrics, tracing, structured logs, synthetic monitoring.
+
+Required Output: Metrics/log emitters; traces for bridge I/O; synthetic “order round-trip” checks.
+
+Sub-task: Detection & analysis.
+
+Constraint: Anomaly detection + threshold rules; correlate symptoms to root cause (e.g., DDE stale, bridge backlog).
+
+Required Output: Correlator that maps signals/metrics to likely component faults; raises typed incidents.
+
+Sub-task: Automated response & redundancy.
+
+Constraint: Circuit breakers, auto-restart/rollback, failover to alternate bridge tier; switch to degraded workflows without losing signals.
+
+Required Output: Response playbooks per incident type, with idempotency and backoff.
+
+Sub-task: GUI visibility.
+
+Constraint: Modify GUI to show real-time system state, current workflow tier, and remediation steps in progress.
+
+Required Output: Status center in UI with green/amber/red badges and drill-downs.
+
+Sub-task: Tests.
+
+Constraint: Fault-injection tests (kill DDE, saturate outbox, corrupt settings) verify auto-recovery and correct user messaging.
+
+Required Output: Test suite covering detection → response → steady-state.
+
+Main Task: GUI Enhancements for Signals, Health, and Clarity
+
+Sub-task: Signals dashboard.
+
+Constraint: Show FridayMove status (Waiting/Eligible/Fired), symbol, direction, %Δ, p_start, p_end, last_fired_date.
+
+Required Output: Add in main_tab.py + ui_components.py; include filters/sorting.
+
+Sub-task: Chart overlays.
+
+Constraint: Intraday overlay band for 07:30→14:00 Chicago on Fridays; expiry markers for derivative system when available.
+
+Required Output: Overlay renderer with time-zone correctness.
+
+Sub-task: Health & errors surface.
+
+Constraint: Clear indication when any input data is missing (e.g., boundary prices absent) and pinpoint component at fault.
+
+Required Output: Inline warnings + link to Guardian detail panel.
+
+Main Task: Repository Clean-Up & “Save-and-Push Everything” Command
+
+Sub-task: Provide a one-shot script to capture local state and push.
+
+Constraint: The user wants to “save and push everything that’s wafting and start fresh all on this repo.” Use with caution; must not destroy history silently.
+
+Required Output: A guarded script that:
+
+stashes untracked conflicts into a dated branch/tag,
+
+stages all changes,
+
+creates a timestamped commit,
+
+pushes to the current remote branch,
+
+prints a recovery note.
+(If force is required due to divergence, require an explicit --force flag.)
+
+Main Task: Documentation & Canonicalization
+
+Sub-task: Consolidate tactical spec (latest, Excel removed).
+
+Constraint: All docs must reflect Python↔MT4 only; one EA binary; bridge tiers; Guardian; signals inventory.
+
+Required Output: Updated master tactical spec (Markdown) as the single source of truth.
+
+Sub-task: Canonical Subsystem Registry v1.0.
+
+Constraint: Create subsystem_registry.yaml as single source of truth with IDs, names, descriptions, path prefixes, owners, file patterns.
+
+Required Output: Registry file plus a mapper that auto-generates canonical paths/IDs.
+
+Sub-task: File Audit System.
+
+Constraint: Explain purpose, components, and how each subsystem maps to audit categories (CORE/CONFIG/TEST/LEGACY/etc.).
+
+Required Output: Implementation notes and a Mermaid diagram showing mapping of subsystems (from v3.1 lineage) to audit categories.
+
+Sub-task: “Extremely detailed features list.”
+
+Constraint: Exhaustively list every feature present/planned across signals, bridge, EA, Guardian, UI, tests.
+
+Required Output: FEATURES.md with hierarchical sections and status (Planned/In-Progress/Done).
+
+Main Task: Testing & QA Expansion
+
+Sub-task: Extend unit tests.
+
+Constraint: Add tests for DDE connection (test_dde_connection.py), indicator math, Guardian responses, expiry signals, and FridayMove (already added basic tests).
+
+Required Output: Deterministic fixtures and CI-ready tests; include DST edge cases for time-based logic.
+
+Sub-task: Integration tests.
+
+Constraint: Simulate end-to-end signal flow: price ingest → Python signal → bridge → EA execute (dry-run).
+
+Required Output: A headless runner that validates JSON message contract and EA receipt.
+
+Main Task: Configuration Management
+
+Sub-task: Centralize configuration in settings.json.
+
+Constraint: Signals toggle/thresholds, symbol lists, risk profiles live in JSON; no hardcoded params.
+
+Required Output: Update loaders (config_manager.py) to hydrate new FridayMove and future signal blocks.
+
+Sub-task: Risk profile mapping.
+
+Constraint: Map strength (e.g., Friday %Δ) into a configurable risk profile or size multiplier (either in Python before send, or EA on receipt—choose one and document).
+
+Required Output: Documented policy and code path.
+
+Main Task: Agentic AI Workflow Support
+
+Sub-task: Produce machine-parsable outputs and patch bundles.
+
+Constraint: When generating code/docs, output as discrete files (Markdown/JSON/YAML/Python/MQL4) ready to commit.
+
+Required Output: For each change, emit a patch bundle and update an Index file listing artifacts and their locations.
+
+Sub-task: Periodic documentation review.
+
+Constraint: The user wants a running list of current documentation and review every ~10 responses.
+
+Required Output: Create DOC_INDEX.md and update it whenever artifacts change; include a checklist for each review pass.
+
+Main Task: Deliver & Place the New Artifacts (already prepared)
+
+Sub-task: Add the following files to the repo.
+
+Constraint: Keep relative paths; integrate without breaking existing runner.
+
+Required Output (files):
+
+signals/friday_vol_signal.py
+
+tests/test_friday_vol_signal.py
+
+INTEGRATE_FRIDAY_MOVE.md (step-by-step wiring guide)
+
+settings.friday_move.overlay.json (safe overlay for settings.json)
+
+bridge/outbound.py (illustrative sender stub if needed)
+
+Main Task: Acceptance Criteria (Go/No-Go)
+
+Sub-task: FridayMove
+
+Constraint: On a real Friday after 14:00 Chicago, with %Δ >= threshold, exactly one EXECUTE message per symbol is emitted; EA executes once; UI shows Fired with correct metrics.
+
+Required Output: Log evidence + UI screenshot + test pass.
+
+Sub-task: DDE Indicators
+
+Constraint: All specified %Δ windows and currency strength values render; missing data states are visibly flagged.
+
+Required Output: UI snapshot + unit test results.
+
+Sub-task: Guardian
+
+Constraint: Induced failures (DDE down, bridge blocked) trigger constraint-driven responses and visible status; system degrades gracefully and recovers.
+
+Required Output: Fault-injection report with timestamps and auto-recovery confirmation.
+
+Sub-task: Expiry System
+
+Constraint: Sources documented; scraper normalizes data; at least one synthetic scenario triggers pre-/post-expiry watches.
+
+Required Output: sources.md, normalized sample dataset, and passing tests.
+
+End of authoritative instruction document.

@@ -1,0 +1,17 @@
+id: process_standardizer
+name: "Process Standardizer"
+version: "0.1.0"
+entrypoint: "plugins.process_standardizer.plugin:run"
+capabilities:
+  - command: normalize
+    inputs:
+      input_file: {type: path, required: true}
+      output_file: {type: path, default: null}
+      dry_run: {type: bool, default: false}
+    outputs:
+      diagnostics: {type: list[object]}
+policies:
+  io:
+    read: ["registries/*.yaml", "*.yaml", "*.yml"]
+    write: ["*.yaml", "*.yml"]
+  network: false

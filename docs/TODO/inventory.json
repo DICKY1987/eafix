@@ -1,0 +1,11 @@
+[
+  {
+    "relative_path": "HUEY_P_Spec_Patch_v3_5_Consolidation.md",
+    "category": "Markdown doc",
+    "extension": ".md",
+    "size_kb": 6.62,
+    "modified_in_zip": "2025-08-27T23:01:22",
+    "hash8": "08e39b80",
+    "preview": "# HUEY_P \u2014 Spec v3.5 Consolidation Pack Generated: 2025-08-27 23:01:22 This single document contains: - A. **Protocol decision & migration notes** (v1.0 baseline + v1.2 preferred). - B. **Spec patch (redline-style)** to remove Excel/VBA, clarify single EA binary (multi\u2011instance), and route dashboards to Python. - C. **Child pages** (wiki-ready outlines with breadcrumb blocks). - D. **CI link/ancho"
+  }
+]

@@ -1,0 +1,14 @@
+id: diagram_generator
+name: "Diagram Generator"
+version: "0.1.0"
+entrypoint: "plugins.diagram_generator.plugin:run"
+capabilities:
+  - command: drawio
+    inputs:
+      input_file: {type: path, required: true}
+      output_file: {type: path, default: null}
+policies:
+  io:
+    read: ["*.yaml", "*.yml"]
+    write: ["*.drawio"]
+  network: false

@@ -1,0 +1,542 @@
+{
+  "framework_metadata": {
+    "name": "Atomic SDLC Framework with OUT_THE_MUD Compliance",
+    "version": "2.0.0",
+    "description": "JSON-only modular atomic workflow system for complete SDLC with constraint-based validation, 7-phase quality gates, and MCP integration",
+    "created": "2025-08-05",
+    "updated": "2025-08-05T12:00:00Z",
+    "architecture": "constraint_based_deterministic_ai_hybrid",
+    "data_format": "json_only",
+    "validation_loops": true,
+    "project_knowledge_integration": {
+      "enabled": true,
+      "json_extraction_pipeline": {
+        "source_metadata": {
+          "file_path": "original_file_location",
+          "file_type": "markdown_or_python_or_other",
+          "extraction_timestamp": "iso_8601_timestamp",
+          "extraction_method": "automated_parser_or_manual_conversion"
+        },
+        "extracted_knowledge": {
+          "beneficial_techniques": "json_array_of_technique_objects",
+          "constraints": "json_array_of_constraint_definitions",
+          "patterns": "json_array_of_reusable_patterns",
+          "metrics": "json_object_with_effectiveness_scores"
+        },
+        "validation_results": {
+          "extraction_quality_score": "numeric_confidence_score",
+          "completeness_check": "boolean_validation_result",
+          "format_compliance": "json_validation_status"
+        }
+      },
+      "knowledge_sources": [
+        {
+          "source_id": "claude_md_knowledge",
+          "source_metadata": {
+            "file_path": "CLAUDE.md",
+            "file_type": "markdown",
+            "extraction_timestamp": "2025-08-06T00:00:00Z",
+            "extraction_method": "automated_parser"
+          },
+          "extracted_knowledge": {
+            "beneficial_techniques": [
+              {"technique": "constraint_based_validation", "effectiveness_score": 95, "implementation": "mandatory_validation_pipeline"},
+              {"technique": "atomic_operation_breakdown", "effectiveness_score": 90, "implementation": "surgically_modifiable_components"},
+              {"technique": "multi_perspective_validation", "effectiveness_score": 88, "implementation": "domain_expert_personas"}
+            ],
+            "constraints": [
+              {"constraint_id": "mandatory_constraint_validation", "requirement": "all_code_must_pass_constraint_repository"},
+              {"constraint_id": "atomic_operation_mandate", "requirement": "break_tasks_into_atomic_operations"}
+            ],
+            "patterns": [
+              {"pattern": "ropes_framework", "components": ["role", "objective", "planning", "execution", "synthesis"]},
+              {"pattern": "quality_gates", "thresholds": {"gate_a": ">=1_finding_per_domain", "gate_b": ">=3_issues_plus_fatal"}}
+            ],
+            "metrics": {"confidence_threshold": 0.9, "max_iterations": 5, "quality_score_target": 90}
+          },
+          "validation_results": {
+            "extraction_quality_score": 0.95,
+            "completeness_check": true,
+            "format_compliance": "json_compliant"
+          }
+        }
+      ],
+      "validation_frequency": "per_cycle"
+    }
+  },
+  "atomic_operations": {
+    "planning_phase": {
+      "atoms": [
+        {
+          "id": "atom_p001",
+          "name": "requirements_gathering",
+          "type": "constraint_validated_deterministic",
+          "inputs": ["stakeholder_list", "business_objectives"],
+          "outputs": ["requirements_matrix", "acceptance_criteria"],
+          "validation_gates": ["completeness_check", "stakeholder_approval", "out_the_mud_compliance"],
+          "ai_decision_points": ["priority_ranking", "conflict_resolution"],
+          "performance_budget": {
+            "max_response_time_ms": 2000,
+            "max_memory_mb": 50,
+            "max_cpu_percent": 25
+          },
+          "quality_metrics": {
+            "constraint_coverage": 0.95,
+            "validation_score": 0.90,
+            "completeness_threshold": 0.85
+          },
+          "constraint_validations": [
+            "requirement_clarity_check",
+            "testability_validation",
+            "business_alignment_verification"
+          ]
+        },
+        {
+          "id": "atom_p002", 
+          "name": "7_phase_risk_assessment",
+          "type": "ai_hybrid_with_7_phase_pipeline",
+          "inputs": ["requirements_matrix", "historical_data"],
+          "outputs": ["risk_register", "mitigation_strategies", "quality_report"],
+          "situational_factors": ["project_complexity", "team_experience", "timeline_constraints"],
+          "decision_tree": "risk_analysis_matrix",
+          "pipeline_phases": [
+            {
+              "phase": 1,
+              "name": "risk_preprocessing",
+              "validation": "integrity_check",
+              "threshold": 1.0
+            },
+            {
+              "phase": 2,
+              "name": "risk_extraction",
+              "validation": "completeness_check", 
+              "threshold": 1.0
+            },
+            {
+              "phase": 3,
+              "name": "risk_classification",
+              "validation": "schema_detection",
+              "threshold": 1.0
+            },
+            {
+              "phase": 4,
+              "name": "risk_transformation",
+              "validation": "rule_application",
+              "threshold": 0.95
+            },
+            {
+              "phase": 5,
+              "name": "risk_enhancement",
+              "validation": "quality_scoring",
+              "threshold": 0.80
+            },
+            {
+              "phase": 6,
+              "name": "risk_validation",
+              "validation": "schema_compliance",
+              "threshold": 0.80
+            },
+            {
+              "phase": 7,
+              "name": "risk_output_generation",
+              "validation": "final_quality_check",
+              "threshold": 1.0
+            }
+          ]
+        },
+        {
+          "id": "atom_p003",
+          "name": "constraint_based_architecture_design",
+          "type": "mcp_integrated_ai_hybrid",
+          "inputs": ["requirements_matrix", "risk_register", "constraint_repository"],
+          "outputs": ["system_architecture", "technology_stack", "constraint_compliance_report"],
+          "validation_gates": ["scalability_check", "security_review", "constraint_coverage"],
+          "ai_decision_points": ["pattern_selection", "technology_recommendation"],
+          "mcp_integration": {
+            "constraint_query_tools": true,
+            "template_generation": true,
+            "real_time_validation": true
+          },
+          "constraint_coverage_requirement": 0.95
+        }
+      ]
+    },
+    "development_phase": {
+      "atoms": [
+        {
+          "id": "atom_d001",
+          "name": "constraint_validated_code_generation", 
+          "type": "real_time_constraint_ai_hybrid",
+          "inputs": ["design_specifications", "coding_standards", "constraint_repository"],
+          "outputs": ["source_code", "documentation", "constraint_validation_report"],
+          "validation_gates": ["syntax_check", "standards_compliance", "constraint_adherence"],
+          "situational_factors": ["developer_skill_level", "code_complexity", "reusability_requirements"],
+          "real_time_validation": {
+            "constraint_queries": "sub_100ms",
+            "pattern_matching": "fts5_enabled",
+            "multi_domain_support": ["Python", "MQL4", "FastAPI", "JavaScript", "SQL"]
+          },
+          "performance_requirements": {
+            "constraint_query_ms": 100,
+            "validation_response_ms": 500,
+            "memory_usage_mb": 256
+          }
+        },
+        {
+          "id": "atom_d002",
+          "name": "atomic_pipeline_code_review",
+          "type": "deterministic_with_atomic_operations",
+          "inputs": ["source_code", "review_checklist", "atomic_operation_library"],
+          "outputs": ["review_report", "approved_code", "atomic_operation_compliance"],
+          "validation_gates": ["security_scan", "performance_check", "maintainability_score"],
+          "ai_decision_points": ["review_priority", "reviewer_assignment"],
+          "atomic_operations": [
+            "syntax_validation",
+            "security_pattern_check", 
+            "performance_anti_pattern_detection",
+            "maintainability_scoring",
+            "documentation_completeness"
+          ],
+          "execution_budget_ms": 5000
+        },
+        {
+          "id": "atom_d003",
+          "name": "quality_gate_unit_testing",
+          "type": "deterministic_with_quality_gates",
+          "inputs": ["source_code", "test_requirements"],
+          "outputs": ["test_cases", "coverage_report", "quality_gate_status"],
+          "validation_gates": ["coverage_threshold", "test_quality_score"],
+          "quality_gates": [
+            {
+              "gate_id": "coverage_gate",
+              "threshold": 0.95,
+              "type": "deterministic"
+            },
+            {
+              "gate_id": "quality_gate", 
+              "threshold": 0.90,
+              "type": "scoring_based"
+            }
+          ]
+        }
+      ]
+    },
+    "testing_phase": {
+      "atoms": [
+        {
+          "id": "atom_t001",
+          "name": "integration_testing_with_error_recovery",
+          "type": "deterministic_with_recovery_matrix",
+          "inputs": ["integrated_modules", "integration_specs"],
+          "outputs": ["integration_results", "defect_report"],
+          "validation_gates": ["integration_success_rate", "performance_benchmarks"],
+          "error_handling_matrix": {
+            "INTEGRATION_FAILURE": {
+              "recovery": "attempt_module_isolation",
+              "fallback": "manual_review_required"
+            },
+            "PERFORMANCE_DEGRADATION": {
+              "recovery": "resource_optimization", 
+              "fallback": "architecture_review_required"
+            },
+            "DEPENDENCY_CONFLICT": {
+              "recovery": "version_resolution",
+              "fallback": "dependency_restructure_required"
+            }
+          }
+        },
+        {
+          "id": "atom_t002",
+          "name": "system_testing_with_weighted_scoring",
+          "type": "ai_hybrid_with_weighted_analysis",
+          "inputs": ["complete_system", "test_scenarios"],
+          "outputs": ["test_results", "quality_metrics", "weighted_score_analysis"],
+          "situational_factors": ["system_complexity", "user_scenarios", "environment_variables"],
+          "ai_decision_points": ["test_case_prioritization", "failure_analysis"],
+          "weighted_scoring": {
+            "functionality": {"weight": 0.3, "threshold": 0.95},
+            "performance": {"weight": 0.25, "threshold": 0.90},
+            "security": {"weight": 0.2, "threshold": 0.95},
+            "usability": {"weight": 0.15, "threshold": 0.85},
+            "reliability": {"weight": 0.1, "threshold": 0.92}
+          }
+        },
+        {
+          "id": "atom_t003",
+          "name": "user_acceptance_testing_with_schema_validation",
+          "type": "ai_hybrid_with_schema_compliance",
+          "inputs": ["system_build", "user_requirements", "acceptance_schema"],
+          "outputs": ["acceptance_report", "user_feedback", "schema_compliance_report"],
+          "ai_decision_points": ["feedback_analysis", "acceptance_prediction"],
+          "schema_validation": {
+            "out_the_mud_compliance": true,
+            "component_schema_validation": true,
+            "interface_schema_validation": true
+          }
+        }
+      ]
+    },
+    "deployment_phase": {
+      "atoms": [
+        {
+          "id": "atom_dp001",
+          "name": "deployment_preparation_with_template_validation",
+          "type": "deterministic_with_template_compliance",
+          "inputs": ["approved_build", "deployment_checklist", "deployment_templates_json_wrapped"],
+          "outputs": ["deployment_package", "rollback_plan", "template_compliance_report"],
+          "validation_gates": ["environment_readiness", "backup_verification", "template_security_scan"],
+          "deployment_template_json_wrapper": {
+            "template_metadata": {
+              "name": "kubernetes_deployment_template",
+              "format": "yaml_content_as_string",
+              "validation_schema": "json_schema_reference"
+            },
+            "template_content": "yaml_content_stored_as_json_string_field",
+            "validation_rules": "json_schema_validation_rules",
+            "compliance_checks": "json_array_of_compliance_requirements"
+          },
+          "template_validation": {
+            "security_scanning": true,
+            "compliance_checking": true,
+            "automated_validation": true,
+            "json_envelope_required": true
+          }
+        },
+        {
+          "id": "atom_dp002",
+          "name": "production_deployment_with_monitoring",
+          "type": "ai_hybrid_with_continuous_monitoring",
+          "inputs": ["deployment_package", "environment_config"],
+          "outputs": ["deployment_status", "health_metrics", "monitoring_dashboard"],
+          "situational_factors": ["traffic_patterns", "system_load", "business_impact"],
+          "ai_decision_points": ["deployment_timing", "rollback_triggers"],
+          "continuous_monitoring": {
+            "performance_tracking": true,
+            "error_rate_monitoring": true,
+            "business_impact_analysis": true
+          }
+        }
+      ]
+    },
+    "maintenance_phase": {
+      "atoms": [
+        {
+          "id": "atom_m001",
+          "name": "monitoring_analysis_with_learning_engine",
+          "type": "ai_hybrid_with_learning_integration",
+          "inputs": ["system_metrics", "user_behavior", "historical_patterns"],
+          "outputs": ["performance_report", "optimization_recommendations", "learning_insights"],
+          "situational_factors": ["usage_patterns", "performance_thresholds", "business_objectives"],
+          "ai_decision_points": ["anomaly_detection", "optimization_prioritization"],
+          "learning_engine": {
+            "pattern_recognition": true,
+            "predictive_analysis": true,
+            "continuous_improvement": true
+          }
+        },
+        {
+          "id": "atom_m002",
+          "name": "defect_resolution_with_constraint_validation",
+          "type": "ai_hybrid_with_constraint_checking",
+          "inputs": ["defect_reports", "system_logs", "constraint_repository"],
+          "outputs": ["fix_recommendations", "impact_analysis", "constraint_compliance_verification"],
+          "ai_decision_points": ["root_cause_analysis", "fix_prioritization"],
+          "constraint_validation": {
+            "pre_fix_validation": true,
+            "post_fix_verification": true,
+            "regression_prevention": true
+          }
+        }
+      ]
+    }
+  },
+  "continuous_improvement_with_project_knowledge": {
+    "cycle_validation": {
+      "enabled": true,
+      "frequency": "every_cycle",
+      "project_documents": [
+        "CLAUDE.md",
+        "out_the_mud_spec_v2.md", 
+        "native_json_specification.json",
+        "enhanced_yaml_converter.py"
+      ],
+      "native_json_specification_format": {
+        "specification_metadata": {
+          "name": "atomic_operation_specification",
+          "version": "semantic_version_string",
+          "format": "native_json_schema"
+        },
+        "operation_definition": {
+          "inputs": "json_schema_definitions_for_inputs",
+          "outputs": "json_schema_definitions_for_outputs", 
+          "validation_rules": "json_schema_validation_constraints",
+          "performance_requirements": "json_object_with_slo_definitions"
+        },
+        "compliance_requirements": "json_array_of_compliance_checks"
+      },
+      "beneficial_techniques_extraction": [
+        {
+          "technique": "7_phase_quality_pipeline",
+          "source": "enhanced_yaml_converter.py",
+          "integration_status": "integrated",
+          "effectiveness_rating": 0.95
+        },
+        {
+          "technique": "constraint_based_validation",
+          "source": "CLAUDE.md", 
+          "integration_status": "integrated",
+          "effectiveness_rating": 0.92
+        },
+        {
+          "technique": "out_the_mud_compliance",
+          "source": "out_the_mud_spec_v2.md",
+          "integration_status": "integrated", 
+          "effectiveness_rating": 0.88
+        },
+        {
+          "technique": "mcp_server_integration",
+          "source": "constraint-repository-server.py",
+          "integration_status": "integrated",
+          "effectiveness_rating": 0.90
+        },
+        {
+          "technique": "error_handling_matrix",
+          "source": "CLAUDE.md",
+          "integration_status": "integrated",
+          "effectiveness_rating": 0.87
+        },
+        {
+          "technique": "atomic_pipeline_execution",
+          "source": "out_the_mud_spec_v2.md",
+          "integration_status": "integrated",
+          "effectiveness_rating": 0.93
+        },
+        {
+          "technique": "weighted_scoring_system",
+          "source": "enhanced_yaml_converter.py",
+          "integration_status": "integrated",
+          "effectiveness_rating": 0.89
+        }
+      ]
+    },
+    "web_research_integration": {
+      "enabled": true,
+      "sources": ["industry_standards", "best_practices", "research_papers", "case_studies"],
+      "validation_frequency": "per_iteration",
+      "learning_integration": "automatic",
+      "effectiveness_threshold": 0.85
+    }
+  },
+  "enhanced_validation_gates": {
+    "7_phase_quality_checkpoints": [
+      {
+        "phase": 1,
+        "name": "preprocessing_validation",
+        "criteria": "file_integrity_and_syntax_validation",
+        "threshold": 1.0,
+        "type": "deterministic"
+      },
+      {
+        "phase": 2, 
+        "name": "content_extraction",
+        "criteria": "completeness_and_sanitization_check",
+        "threshold": 1.0,
+        "type": "deterministic" 
+      },
+      {
+        "phase": 3,
+        "name": "schema_detection",
+        "criteria": "deterministic_classification_confidence",
+        "threshold": 1.0,
+        "type": "deterministic"
+      },
+      {
+        "phase": 4,
+        "name": "content_transformation",
+        "criteria": "rule_application_success",
+        "threshold": 0.95,
+        "type": "scoring_based"
+      },
+      {
+        "phase": 5,
+        "name": "schema_enhancement", 
+        "criteria": "constraint_subtype_validation",
+        "threshold": 0.80,
+        "type": "scoring_based"
+      },
+      {
+        "phase": 6,
+        "name": "validation_and_qa",
+        "criteria": "schema_validation_with_quality_gates", 
+        "threshold": 0.80,
+        "type": "scoring_based"
+      },
+      {
+        "phase": 7,
+        "name": "output_generation",
+        "criteria": "formatted_json_with_validation_reports",
+        "threshold": 1.0,
+        "type": "deterministic"
+      }
+    ],
+    "out_the_mud_convergence_criteria": {
+      "blockers": 0,
+      "major_issues": {
+        "max_count": 2,
+        "requires_mitigation": true
+      },
+      "quality_score": {
+        "minimum": 90,
+        "scale": 100
+      },
+      "evidence_quality": {
+        "minimum": 0.8,
+        "requires_citations": true
+      },
+      "constraint_coverage": {
+        "minimum": 0.95,
+        "domains": ["security", "performance", "maintainability", "scalability", "reliability"]
+      }
+    }
+  },
+  "performance_requirements": {
+    "constraint_queries": {
+      "max_response_time_ms": 100,
+      "percentile": 95,
+      "search_engine": "fts5"
+    },
+    "atomic_pipeline_execution": {
+      "max_budget_ms": 5000,
+      "memory_limit_mb": 500,
+      "cpu_limit_percent": 75
+    },
+    "template_generation": {
+      "max_response_time_ms": 500,
+      "quality_threshold": 0.90,
+      "compliance_check": true
+    }
+  },
+  "project_knowledge_validation_matrix": {
+    "validation_rules": [
+      {
+        "rule_id": "beneficial_technique_review",
+        "description": "Every cycle must review project documents for beneficial techniques",
+        "frequency": "per_cycle",
+        "mandatory": true,
+        "effectiveness_threshold": 0.85
+      },
+      {
+        "rule_id": "integration_assessment", 
+        "description": "Assess each technique for potential integration effectiveness",
+        "criteria": ["performance_impact", "complexity_reduction", "quality_improvement"],
+        "scoring_method": "weighted_average"
+      },
+      {
+        "rule_id": "continuous_improvement",
+        "description": "Integrate techniques that exceed effectiveness threshold",
+        "action": "automatic_integration",
+        "rollback_criteria": "performance_degradation"
+      }
+    ]
+  }
+}

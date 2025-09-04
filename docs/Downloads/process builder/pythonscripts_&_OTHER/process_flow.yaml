@@ -1,0 +1,765 @@
+title: Atomic Process Flow — Reentry Trading System
+version: v3.1
+date: "2025-08-22"
+id_conventions: "Format: SECTION.STEP (e.g., 1.001). Sub-processes: PREFIX.STEP (e.g., RC.001)"
+legend: "Each step is atomic (one action). Sub-processes are reusable components called from main steps."
+sections:
+  -
+    section_id: 0.000
+    title: "System Bootstrap (One-Time on Service Start)"
+    description: Initialize system components and validate configuration
+    actors:
+      - PY
+    transport: Filesystem
+    steps:
+      -
+        step_id: 0.001
+        actor: PY
+        description: "Load Common\\Files\\reentry\\config\\parameters.schema.json into memory and validate file integrity."
+        dependencies:
+
+        goto_targets:
+          - 11.010
+        conditions:
+          - If schema file is missing or hash mismatch
+        subprocess_calls:
+          -
+            subprocess_id: FILE_VALIDATE
+            input_mapping:
+              file_path: parameters_schema_path
+            output_mapping:
+              is_valid: schema_file_valid
+              actual_hash: schema_hash
+            description: Validate schema file integrity (existence/hash/age)
+        sla_ms: 500
+        file_operations:
+          - "READ: config/parameters.schema.json"
+        validation_rules:
+          - $id field present
+          - $schema field present
+        error_codes:
+          - E0000
+        input_variables:
+          - parameters_schema_path
+        output_variables:
+          - schema_content
+          - schema_file_valid
+          - schema_hash
+        notes: 
+      -
+        step_id: 0.002
+        actor: PY
+        description: "Validate schema self-integrity ($id, $schema fields present)."
+        dependencies:
+          - 0.001
+        goto_targets:
+          - 11.010
+        conditions:
+          - If fail
+        subprocess_calls:
+
+        sla_ms: 200
+        file_operations:
+
+        validation_rules:
+          - $id field present
+          - $schema field present
+        error_codes:
+
+        input_variables:
+          - schema_content
+        output_variables:
+
+        notes: 
+      -
+        step_id: 0.003
+        actor: PY
+        description: "Ensure directories exist: ...\\bridge, ...\\logs, ...\\config, ...\\data. Create if missing."
+        dependencies:
+          - 0.002
+        goto_targets:
+
+        conditions:
+
+        subprocess_calls:
+
+        sla_ms: 1000
+        file_operations:
+          - "CREATE_DIR: bridge/"
+          - "CREATE_DIR: logs/"
+          - "CREATE_DIR: config/"
+          - "CREATE_DIR: data/"
+        validation_rules:
+
+        error_codes:
+
+        input_variables:
+
+        output_variables:
+
+        notes: 
+  -
+    section_id: 1.000
+    title: "Economic Calendar Ingestion (Hourly From Sunday 12:00 Local)"
+    description: Ingest and process economic calendar data
+    actors:
+      - PY
+      - FS
+    transport: "CSV-only"
+    steps:
+      -
+        step_id: 1.001
+        actor: PY
+        description: "At scheduler tick, scan %USERPROFILE%\\Downloads for newest economic_calendar*.csv/.xlsx."
+        dependencies:
+
+        goto_targets:
+
+        conditions:
+
+        subprocess_calls:
+
+        sla_ms: 1000
+        file_operations:
+          - "SCAN: %USERPROFILE%\\Downloads"
+        validation_rules:
+
+        error_codes:
+
+        input_variables:
+
+        output_variables:
+          - newest_calendar_path
+        notes: 
+      -
+        step_id: 1.002
+        actor: PY
+        description: "If none found GOTO 1.010. Else copy-as-new to data\\economic_calendar_raw_YYYYMMDD_HHMMSS.ext (write→fsync→rename atomic)."
+        dependencies:
+          - 1.001
+        goto_targets:
+          - 1.010
+        conditions:
+          - If none found
+        subprocess_calls:
+          -
+            subprocess_id: FILE_VALIDATE
+            input_mapping:
+              file_path: newest_calendar_path
+            output_mapping:
+              is_valid: calendar_file_valid
+              actual_hash: calendar_hash
+            description: Validate calendar file before ingest
+        sla_ms: 500
+        file_operations:
+          - "WRITE_ATOMIC: data/economic_calendar_raw_*.ext"
+        validation_rules:
+
+        error_codes:
+
+        input_variables:
+          - newest_calendar_path
+        output_variables:
+          - ingested_calendar_path
+          - calendar_file_valid
+          - calendar_hash
+        notes: 
+  -
+    section_id: 3.000
+    title: Matrix Routing & Parameter Resolution
+    description: Route signals and calculate parameters with risk management
+    actors:
+      - PY
+    transport: Memory
+    steps:
+      -
+        step_id: 3.006
+        actor: PY
+        description: Compute effective risk and position sizing via subprocess RISK_CALC.
+        dependencies:
+
+        goto_targets:
+
+        conditions:
+
+        subprocess_calls:
+          -
+            subprocess_id: RISK_CALC
+            input_mapping:
+              base_risk_percent: global_risk_percent
+              volatility_multiplier: volatility_adjustment
+              symbol_info: symbol_contract_info
+              account_balance: account_balance
+              currency_conversion_rate: currency_conversion_rate
+            output_mapping:
+              effective_risk: calculated_risk
+              lot_size: position_size
+              dollar_risk: dollar_risk
+            description: "Calculate risk-adjusted position size"
+        sla_ms: 50
+        file_operations:
+
+        validation_rules:
+          - effective_risk <= 3.50
+        error_codes:
+          - E1001
+        input_variables:
+          - global_risk_percent
+          - volatility_adjustment
+          - symbol_contract_info
+          - account_balance
+          - currency_conversion_rate
+        output_variables:
+          - calculated_risk
+          - position_size
+          - dollar_risk
+        notes: 
+  -
+    section_id: 11.000
+    title: Error Handling & Termination
+    description: "Fail-fast handling and logging"
+    actors:
+      - PY
+    transport: Memory
+    steps:
+      -
+        step_id: 11.010
+        actor: PY
+        description: "Abort initialization, log error, and raise E0000 if schema validation fails."
+        dependencies:
+
+        goto_targets:
+
+        conditions:
+          - If bootstrap validation fails
+        subprocess_calls:
+
+        sla_ms: 10
+        file_operations:
+          - "WRITE: logs/error.log"
+        validation_rules:
+
+        error_codes:
+          - E0000
+        input_variables:
+          - error_detail
+        output_variables:
+
+        notes: 
+subprocesses:
+  -
+    subprocess_id: RISK_CALC
+    name: Risk Calculation and Position Sizing
+    description: Calculate effective risk percentage and convert to position size with validation
+    version: 1.1
+    inputs:
+      inputs:
+        -
+          name: base_risk_percent
+          data_type: number
+          description: "Base risk percentage (0.1-3.5)"
+          required: true
+        -
+          name: volatility_multiplier
+          data_type: number
+          description: Volatility adjustment factor
+          required: true
+          default_value: 1.0
+        -
+          name: symbol_info
+          data_type: object
+          description: Symbol contract specifications
+          required: true
+        -
+          name: account_balance
+          data_type: number
+          description: Current account balance
+          required: true
+        -
+          name: currency_conversion_rate
+          data_type: number
+          description: USD conversion rate
+          required: false
+          default_value: 1.0
+    outputs:
+      outputs:
+        -
+          name: effective_risk
+          data_type: number
+          description: Final calculated risk percentage
+          required: true
+        -
+          name: lot_size
+          data_type: number
+          description: Position size in lots
+          required: true
+        -
+          name: dollar_risk
+          data_type: number
+          description: Risk amount in account currency
+          required: true
+        -
+          name: validation_warnings
+          data_type: array
+          description: Risk validation warnings
+          required: false
+          default_value:
+
+    steps:
+      -
+        step_id: RC.001
+        actor: PY
+        description: Apply volatility multiplier to base risk
+        input_variables:
+          - base_risk_percent
+          - volatility_multiplier
+        output_variables:
+          - adjusted_risk
+        validation_rules:
+          - "volatility_multiplier > 0"
+          - "base_risk_percent > 0"
+        sla_ms: 5
+      -
+        step_id: RC.002
+        actor: PY
+        description: Enforce maximum risk cap of 3.50%
+        input_variables:
+          - adjusted_risk
+        output_variables:
+          - effective_risk
+        validation_rules:
+          - effective_risk <= 3.50
+        error_codes:
+          - E1001
+        sla_ms: 5
+      -
+        step_id: RC.003
+        actor: PY
+        description: Calculate dollar risk amount
+        input_variables:
+          - effective_risk
+          - account_balance
+        output_variables:
+          - dollar_risk
+        sla_ms: 10
+      -
+        step_id: RC.004
+        actor: PY
+        description: Convert to lot size using symbol contract specifications
+        input_variables:
+          - dollar_risk
+          - symbol_info
+          - currency_conversion_rate
+        output_variables:
+          - lot_size
+        validation_rules:
+          - "lot_size >= symbol_info.min_lot"
+          - lot_size <= symbol_info.max_lot
+        sla_ms: 15
+    tags:
+      - risk
+      - calculation
+      - "position-sizing"
+      - validation
+    complexity_score: 4
+  -
+    subprocess_id: FILE_VALIDATE
+    name: File Integrity Validation
+    description: Validate file integrity with hash checking and atomic operations
+    version: 1.0
+    inputs:
+      inputs:
+        -
+          name: file_path
+          data_type: string
+          description: Path to file to validate
+          required: true
+        -
+          name: expected_hash
+          data_type: string
+          description: "Expected SHA-256 hash"
+          required: false
+        -
+          name: max_age_hours
+          data_type: number
+          description: Maximum file age in hours
+          required: false
+          default_value: 24
+    outputs:
+      outputs:
+        -
+          name: is_valid
+          data_type: boolean
+          description: File validation result
+          required: true
+        -
+          name: actual_hash
+          data_type: string
+          description: Computed file hash
+          required: true
+        -
+          name: file_size
+          data_type: number
+          description: File size in bytes
+          required: true
+        -
+          name: file_age_hours
+          data_type: number
+          description: File age in hours
+          required: true
+    steps:
+      -
+        step_id: FV.001
+        actor: PY
+        description: Check file exists and compute basic metrics
+        input_variables:
+          - file_path
+        output_variables:
+          - file_exists
+          - file_size
+          - file_age_hours
+        conditions:
+          - If not file_exists
+        goto_targets:
+          - FV.004
+        sla_ms: 50
+      -
+        step_id: FV.002
+        actor: PY
+        description: "Compute SHA-256 hash of file content"
+        dependencies:
+          - FV.001
+        input_variables:
+          - file_path
+        output_variables:
+          - actual_hash
+        sla_ms: 300
+      -
+        step_id: FV.003
+        actor: PY
+        description: Compare with expected hash if provided
+        dependencies:
+          - FV.002
+        input_variables:
+          - actual_hash
+          - expected_hash
+          - file_age_hours
+          - max_age_hours
+        output_variables:
+          - is_valid
+        sla_ms: 5
+      -
+        step_id: FV.004
+        actor: PY
+        description: Set validation failed for missing file
+        input_variables:
+
+        output_variables:
+          - is_valid
+        notes: is_valid = False when file doesn't exist
+        sla_ms: 1
+    tags:
+      - file
+      - validation
+      - integrity
+      - security
+    complexity_score: 2
+  -
+    subprocess_id: ECO_PROCESS
+    name: Economic Calendar Processing
+    description: Transform raw economic calendar data into normalized trading signals
+    version: 1.0
+    inputs:
+      inputs:
+        -
+          name: raw_calendar_data
+          data_type: object
+          description: Raw calendar data from source
+          required: true
+        -
+          name: impact_filter
+          data_type: array
+          description: Impact levels to include
+          required: true
+          default_value:
+            - HIGH
+            - MED
+        -
+          name: currency_filter
+          data_type: array
+          description: Currencies to process
+          required: false
+          default_value:
+            - USD
+            - EUR
+            - GBP
+            - JPY
+    outputs:
+      outputs:
+        -
+          name: normalized_events
+          data_type: array
+          description: Normalized calendar events
+          required: true
+        -
+          name: anticipation_events
+          data_type: array
+          description: Generated anticipation signals
+          required: true
+        -
+          name: processing_stats
+          data_type: object
+          description: Processing statistics
+          required: true
+    steps:
+      -
+        step_id: EP.001
+        actor: PY
+        description: Filter events by impact and currency
+        input_variables:
+          - raw_calendar_data
+          - impact_filter
+          - currency_filter
+        output_variables:
+          - filtered_events
+        sla_ms: 100
+      -
+        step_id: EP.002
+        actor: PY
+        description: Normalize event data structure
+        dependencies:
+          - EP.001
+        input_variables:
+          - filtered_events
+        output_variables:
+          - normalized_events
+        validation_rules:
+          - All events have required fields
+        sla_ms: 200
+      -
+        step_id: EP.003
+        actor: PY
+        description: "Generate anticipation events (1hr, 8hr before)"
+        dependencies:
+          - EP.002
+        input_variables:
+          - normalized_events
+        output_variables:
+          - anticipation_events
+        sla_ms: 300
+      -
+        step_id: EP.004
+        actor: PY
+        description: Compute processing statistics
+        dependencies:
+          - EP.002
+          - EP.003
+        input_variables:
+          - normalized_events
+          - anticipation_events
+        output_variables:
+          - processing_stats
+        sla_ms: 50
+    tags:
+      - calendar
+      - processing
+      - normalization
+      - signals
+    complexity_score: 5
+  -
+    subprocess_id: ORDER_VALIDATE
+    name: Order Validation
+    description: Comprehensive validation of order parameters before submission
+    version: 1.0
+    inputs:
+      inputs:
+        -
+          name: order_params
+          data_type: object
+          description: Complete order parameters
+          required: true
+        -
+          name: market_info
+          data_type: object
+          description: Current market state
+          required: true
+        -
+          name: account_info
+          data_type: object
+          description: Account constraints
+          required: true
+    outputs:
+      outputs:
+        -
+          name: is_valid
+          data_type: boolean
+          description: Order validation result
+          required: true
+        -
+          name: validation_errors
+          data_type: array
+          description: List of validation errors
+          required: false
+          default_value:
+
+        -
+          name: warnings
+          data_type: array
+          description: "Non-fatal warnings"
+          required: false
+          default_value:
+
+        -
+          name: adjusted_params
+          data_type: object
+          description: Adjusted order parameters
+          required: true
+    steps:
+      -
+        step_id: OV.001
+        actor: EA
+        description: Validate order type and symbol
+        input_variables:
+          - order_params
+          - market_info
+        output_variables:
+          - basic_valid
+        validation_rules:
+          - Valid order type
+          - Symbol tradeable
+        sla_ms: 10
+      -
+        step_id: OV.002
+        actor: EA
+        description: Validate lot size against broker limits
+        dependencies:
+          - OV.001
+        input_variables:
+          - order_params
+          - account_info
+        output_variables:
+          - lot_valid
+        validation_rules:
+          - "Lot >= min_lot"
+          - Lot <= max_lot
+          - Sufficient margin
+        sla_ms: 20
+      -
+        step_id: OV.003
+        actor: EA
+        description: Validate SL/TP levels and distances
+        dependencies:
+          - OV.001
+        input_variables:
+          - order_params
+          - market_info
+        output_variables:
+          - levels_valid
+        validation_rules:
+          - "SL distance >= min_distance"
+          - "TP > SL (if FIXED)"
+        error_codes:
+          - E1012
+        sla_ms: 15
+      -
+        step_id: OV.004
+        actor: EA
+        description: "Apply broker-specific adjustments"
+        dependencies:
+          - OV.001
+          - OV.002
+          - OV.003
+        input_variables:
+          - order_params
+          - basic_valid
+          - lot_valid
+          - levels_valid
+        output_variables:
+          - adjusted_params
+          - is_valid
+        sla_ms: 25
+    tags:
+      - order
+      - validation
+      - broker
+      - safety
+    complexity_score: 6
+global_inputs:
+  inputs:
+    -
+      name: economic_calendar_file
+      data_type: string
+      description: Path to economic calendar data
+      required: true
+    -
+      name: market_session
+      data_type: string
+      description: Current trading session (LONDON/NY/ASIA)
+      required: true
+    -
+      name: global_risk_percent
+      data_type: number
+      description: Base risk percentage for all trades
+      required: true
+      default_value: 1.0
+    -
+      name: volatility_adjustment
+      data_type: number
+      description: Market volatility multiplier
+      required: true
+      default_value: 1.0
+    -
+      name: system_parameters
+      data_type: object
+      description: Global system configuration
+      required: true
+global_outputs:
+  outputs:
+    -
+      name: trade_signals
+      data_type: array
+      description: Generated trading signals ready for execution
+      required: true
+    -
+      name: system_health_status
+      data_type: object
+      description: Overall system health metrics
+      required: true
+    -
+      name: trade_results
+      data_type: array
+      description: Completed trade outcomes and statistics
+      required: true
+    -
+      name: error_log
+      data_type: array
+      description: System errors and warnings
+      required: false
+      default_value:
+
+file_paths:
+  trading_signals: "bridge\\trading_signals.csv"
+  trade_responses: "bridge\\trade_responses.csv"
+  parameter_log: "logs\\parameter_log.csv"
+  economic_calendar: "data\\economic_calendar.csv"
+  matrix_map: "config\\matrix_map.csv"
+metadata:
+  actors:
+    PY: "Python Service - Main orchestration and data processing"
+    EA: "MT4 Expert Advisor - Trade execution and validation"
+    FS: "Filesystem - File operations and data persistence"
+    BR: "CSV Bridge - Inter-process communication"
+    TEST: "QA Testing - Validation and test scenarios"
+  error_codes:
+    E0000: Version mismatch between components or schema failure
+    E1001: "Risk limit exceeded (>3.50%)"
+    E1012: Take profit must be greater than stop loss
+    E1020: ATR validation failed
+    E1030: Maximum generation limit exceeded
+    E1040: News cutoff time violation
+    E1050: Order placement failed after retries
+  sla_categories:
+    fast: "≤50ms - Simple calculations and validations"
+    standard: "≤500ms - File operations and API calls"
+    complex: "≤2000ms - Complex calculations and transformations"
+    broker: "≤5000ms - Broker operations (network dependent)"

@@ -1,0 +1,6 @@
+# Placeholder health rules for the Guardian framework
+# Real rules will be expressed in domain specific language.
+checks:
+  - name: heartbeat
+    description: Ensure EA heartbeat within tolerance
+    threshold_sec: 3

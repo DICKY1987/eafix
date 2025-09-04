@@ -1,0 +1,296 @@
+Main Task: Unify and Implement the HUEY_P Trading Stack for Agentic Execution
+
+Sub-task: Stand up the Guardian control plane (autonomous monitoring + self-healing)
+
+Constraint: Use the existing Guardian runtime with hysteresis and circuit breakers as the base; keep Windows service behavior intact.
+
+Required Format/Data/Output:
+
+Run the continuous monitoring loop; load health check config from YAML; apply N-of-M hysteresis and circuit breakers; emit state transitions (Healthy/Degraded/Recovering/SafeMode).
+
+Read the trading-specific health configuration (EA heartbeat, bridge latency, DB integrity, system resources, risk exposure, broker reconciliation, calendar feed); trigger alert→remediation mappings exactly as defined.
+
+When alerts fire, invoke the remediation engine (failover, EA restart, reconciliation, kill switch) with idempotency and verification.
+
+Sub-task: Migrate “static health checks” into a constraint repository (incremental cutover)
+
+Constraint: Replace YAML-only checks with a SQLite-backed constraint repository and tiny DSL; maintain compatibility with the current Guardian until cutover completes.
+
+Required Format/Data/Output:
+
+Create SQLite schema for constraints, constraint_runs, and insights; seed with spread/correlation/latency examples; implement an allow-listed condition DSL; expose query_constraints(context) API.
+
+Implement Quality Gates that compute 0–100 scores for market_quality, risk_management, system_health, broker_connectivity and return a QualityReport with overall_score and recommendations.
+
+Add a Multi-Agent Orchestrator (risk veto, weighted consensus) for critical decisions; record learning signals to trading_learning.db; periodically produce and apply “learned insights.”
+
+Sub-task: Integrate Guardian remediation playbooks
+
+Constraint: All recovery actions must be idempotent, broker-reconciled, and verify success before resuming.
+
+Required Format/Data/Output:
+
+Implement: pause new commands at sequence boundaries; reset bridges (socket→CSV→named pipe order); EA restart via DDE then process fallback; broker reconciliation of positions/orders; CSV failover with background socket recovery; graceful position closures with slippage caps.
+
+Sub-task: Enforce the Reentry Trading System FSM as the execution backbone
+
+Constraint: Treat the FSM spec as the contract for signal ingestion, matrix lookup, parameter overlays, execution, re-entry chaining, error recovery, and audit.
+
+Required Format/Data/Output:
+
+Phases 0–10 per spec (init, calendar ingest, signal detection, debouncing, matrix resolution, parameter loading, execution, reentry, recovery, audit).
+
+Use the defined combination grammar gen:signal[:duration]:proximity:outcome and fallback hierarchy for matrix resolution; honor cooldowns, session gates, and VIP overrides; start health timers and background threads as specified.
+
+Main Task: Signals — implement, parameterize, and normalize outputs
+
+Sub-task: Friday Volatility Signal (FridayMove)
+
+Constraint: Python↔MT4 only; no Excel. Operates only on Fridays; evaluates % change from 07:30 to 14:00 CST adjusted to broker time; one-shot per symbol/day; configurable via overlay JSON.
+
+Required Format/Data/Output:
+
+Source code: friday_vol_signal.py (present) + unit tests test_friday_vol_signal.py (present).
+
+Config: settings.friday_move.overlay.json (enabled, percent_threshold, start_local, end_local, risk_profile).
+
+Emit normalized envelope:
+
+{"type":"EXECUTE","source":"Signal.FridayMove","symbol":"<PAIR>","direction":"BUY|SELL","strength":<float>,"meta":{"pct_change":<float>,"window":"0730-1400 CST"},"risk_profile":"FRIDAY_VOL_EDGE_V1"}
+
+
+Guardian monitors execution via EA heartbeat/bridge checks; remediation on failure per health config.
+
+Sub-task: Options-Expiry Microstructure Signals (Pinning, Gamma Walls, Post-Expiry Burst, Compression→Expansion)
+
+Constraint: Python service + MT4; no Excel UI. Use the FastAPI expiry service; MT4 polls via WebRequest/bridge; scraping source may be added later but must not block service operation.
+
+Required Format/Data/Output:
+
+Service: expiry_service.py with routes /health, /spot, /expiries, /expiries.csv, /signals; compute “pin pressure,” “gamma wall touch,” “post-expiry burst,” and compression/expansion features; return JSON/CSV.
+
+Emit normalized envelopes per signal family (as above); include expiry time, strike, notional/oi features in meta.
+
+Guardian health: check port responsiveness & latency; auto-recover using remediation if degraded/unavailable.
+
+Sub-task: Conditional-Probability Continuation Engine (Burst → Forward Move)
+
+Constraint: Empirical, no look-ahead; use M1 bars; enforce sample size thresholds (e.g., n≥200).
+
+Required Format/Data/Output:
+
+Implement conditional_signals.py (offline scanner + runtime lookup) to compute P(Y|X) for grids like M∈{10,15} pips in W∈{10,15} min, targets K∈{15,25} within T∈{60,180} min; Laplace smoothing; Wilson/Beta CIs; store CSV/SQLite.
+
+Runtime: detect live bursts; build state key (with optional indicator/CSI buckets); look up best rows; emit {prob, n, EV_pips, median_ttt} in meta; raise signals only if p≥threshold and n≥n_min.
+
+Sub-task: Currency Strength (CSI) and Percent-Change Windows
+
+Constraint: Compute from DDE-ingested ticks; horizons fixed at 15m/1h/4h/8h/12h/24h; use mid price ((bid+ask)/2). No Excel UI; Python GUI only.
+
+Required Format/Data/Output:
+
+Extend PriceManager with rolling deque history and get_percent_changes(symbol); implement currency_strength.py aggregating pair % changes into per-currency tables; refresh at ~1s.
+
+Add GUI “Strength & % Change” tab with two tables (pairs and currencies) showing the six windows.
+
+Provide functions get_available_symbols(), get_latest_mid().
+
+Sub-task: Strength-based Oscillators (RSI, Stochastic, Z-Score, MACD on CSI)
+
+Constraint: Treat per-currency strength series like price; support differential series D[t]=S_BASE−S_QUOTE for pair-focused signals.
+
+Required Format/Data/Output:
+
+New modules:
+
+strength_feed.py (time series store),
+
+indicators/strength_rsi.py, indicators/strength_stoch.py, indicators/strength_zscore.py (+ optional MACD),
+
+UI panel to visualize OB/OS bands (20/80 or ±2).
+
+Signal recipes: mean-reversion with Z-Score (±2 bands), differential momentum with Stoch K/D, trend continuation with MACD on D[t]; optional breadth filters.
+
+Main Task: DDE Data Plane & GUI Extensions
+
+Sub-task: Use existing MT4↔Python DDE application as the ingestion and indicator host
+
+Constraint: Keep to the documented architecture (DDE client → PriceManager → IndicatorEngine → Tkinter UI; configs, tests, error handler).
+
+Required Format/Data/Output:
+
+Add the percent-change windows and CSI calculator to PriceManager; render the new GUI tab; wire conditional-edge panel (ui_conditional_edge.py) showing live best match from the conditional-prob table.
+
+Main Task: Outbound/Bridge Integration to MT4
+
+Sub-task: Normalize and send command envelopes to EA
+
+Constraint: Replace the outbound.py stub transport with production (socket or named pipe); retain JSONL/CSV failover for Guardian remediation.
+
+Required Format/Data/Output:
+
+Envelope schema:
+
+{"cmd_seq":<int>,"idempotency_key":"<uuid>","op":"EXECUTE","symbol":"<PAIR>","parameters":{...},"constraints":{...},"deadline_ts":"<iso>","trace_id":"trc_<id>","config_version":"guardian-1.0.0"}
+
+
+Maintain idempotency set; confirm EA receipt via heartbeat/ack; on bridge flap, invoke Guardian failover to CSV and background socket recovery.
+
+Main Task: Calendar & FSM Coupling
+
+Sub-task: Economic calendar ingest and activation
+
+Constraint: Follow the Phase-1 pipeline (file discovery/validation, normalization, impact filters, UTC conversion, enrichment, dedup, activation) and the SIGNAL_DETECTION_LOOP cadence/gates.
+
+Required Format/Data/Output:
+
+Write economic_calendar.csv via atomic rename; broadcast updates; generate ANTICIPATION events at T-480 and T-60 for HIGH and at T-60 for MED; sessions (EU/US/ASIA) as specified.
+
+Main Task: Risk, Health, and Remediation Policies
+
+Sub-task: Enforce trading risk boundaries and system limits
+
+Constraint: Apply max_per_trade_pct, max_drawdown_pct, correlation caps, resource thresholds, and broker sync guardrails from health config; kill-switch requires latch/reset.
+
+Required Format/Data/Output:
+
+Trigger engage_kill_switch on risk breach; close positions gracefully; latch system until manual reset; log and audit recovery steps.
+
+Main Task: Testing & Validation
+
+Sub-task: Unit, integration, and smoke tests
+
+Constraint: Keep and extend test_friday_vol_signal.py; add tests for CSI, strength oscillators, conditional-prob scanner, outbound idempotency, and Guardian constraint queries.
+
+Required Format/Data/Output:
+
+Provide run_all_tests.py (or equivalent) to execute full suite; output JSON report; include synthetic feeds for CSI/oscillator edge cases (flat series, missing pairs, session gaps).
+
+Main Task: Configuration & Deployment
+
+Sub-task: Configuration overlays and service processes
+
+Constraint: Keep settings.friday_move.overlay.json as an overlay; Guardian reads its YAML health config; expiry service runs as a Windows service or supervised process; timezone is America/Chicago (CST/CDT) for “local” times while Guardian/EA operate in UTC internally.
+
+Required Format/Data/Output:
+
+Provide startup scripts:
+
+Guardian Windows service (as in implementation);
+
+uvicorn expiry_service:app --host 127.0.0.1 --port <PORT>;
+
+DDE app launcher run_application.py with logging.
+
+Main Task: Repository Consolidation & Structure (agent-ready)
+
+Sub-task: Organize code to reflect responsibilities and enable agentic automation
+
+Constraint: No Excel/VBA components; single configurable EA reused per pair (not one EA per pair); Python handles all GUIs.
+
+Required Format/Data/Output:
+
+Suggested tree (adapt to current repo):
+
+/signals/                       # friday_vol_signal.py, conditional_signals.py, ...
+/services/                      # expiry_service.py
+/bridge/                        # outbound.py (socket/named pipe), csv fallback
+/guardian/                      # guardian_implementation.py, guardian_remediation.py, constraints/, gates/, agents/
+/dde_app/src/                   # dde_client.py, price_manager.py, indicator_engine.py, ui_components.py, main_tab.py
+/dde_app/indicators/            # strength_* indicators, volatility/oscillators
+/config/                        # *.overlay.json, guardian_health_config.yaml
+/tests/                         # unit/integration tests
+/docs/                          # The Complete Reentry Trading System spec, design notes
+
+
+Main Task: Normalized Logging, Audit, and Telemetry
+
+Sub-task: End-to-end traceability
+
+Constraint: Every signal→command→EA action must carry trace_id and idempotency_key; Guardian logs state transitions and remediation steps; FSM logs phase entries/exits with combination IDs.
+
+Required Format/Data/Output:
+
+JSON logs with ISO timestamps; rotating files; audit tables for matrix lookups, parameter overlays, and remediation outcomes.
+
+Main Task: GUI Enhancements for Operator Clarity
+
+Sub-task: Add two panels
+
+Constraint: Tkinter only (no Excel).
+
+Required Format/Data/Output:
+
+“Strength & % Change” tab (pairs + currencies across 15m/1h/4h/8h/12h/24h).
+
+“Conditional Edge” panel listing top learned setups for the active symbol with P(continue), n, EV(pips), median TTT, and “last seen.”
+
+Main Task: Agentic Execution Checklist
+
+Sub-task: Bring-up order
+
+Constraint: Follow this sequence to ensure safe roll-out.
+
+Required Format/Data/Output:
+
+Launch Guardian (baseline YAML health config).
+
+Launch DDE app; verify ticks, PriceManager, and existing indicators.
+
+Enable FridayMove via overlay; run tests; verify one-shot guard.
+
+Stand up expiry service; connect MT4 polling; verify signals.
+
+Add percent-change windows + CSI + GUI tab; validate values.
+
+Add strength oscillators + differential series; validate OB/OS triggers.
+
+Run offline conditional-prob scanner; persist tables; wire live lookup + UI panel.
+
+Replace outbound transport with socket/named pipe; keep CSV failover; verify Guardian remediation paths.
+
+Integrate signals into FSM Phase-2→3; confirm matrix lookups and parameter overlays.
+
+Begin constraint-repo migration; switch Guardian health checks to query the repository; enable quality gates and agent orchestrator; start learning loop.
+
+Main Task: Deliverables Summary (files to add or confirm)
+
+Sub-task: Must exist or be created
+
+Constraint: Names/locations as listed; tests required where noted.
+
+Required Format/Data/Output:
+
+Present (confirm paths): guardian_implementation.py, guardian_health_config.yaml/txt, guardian_remediation.py, The Complete Reentry Trading System- Technical Specification & Process Flow.md, expiry_service.py, friday_vol_signal.py, test_friday_vol_signal.py, connects to MT4 via DDE.md.
+
+To create:
+
+conditional_signals.py, ui_conditional_edge.py
+
+currency_strength.py, strength_feed.py
+
+indicators/strength_rsi.py, indicators/strength_stoch.py, indicators/strength_zscore.py
+
+Guardian constraint repo: guardian/constraints/{schema.sql, seed_constraints.yaml, dsl.py, repository.py, migrate.py}; gates/agents/learning modules per design.
+
+Main Task: Non-functional Requirements
+
+Sub-task: Time, locale, and determinism
+
+Constraint: Local operator time is America/Chicago for display/scheduling; all persistence and protocol timestamps in UTC ISO-8601; no Excel components anywhere in the stack; a single configurable EA instance reused per symbol.
+
+Required Format/Data/Output:
+
+Deterministic scans (no look-ahead); stable IDs for envelopes and FSM entries; reproducible tests with fixed seeds where randomization is used.
+
+Main Task: Documentation & Runbooks
+
+Sub-task: Author and store operator/agent runbooks
+
+Constraint: Use Markdown in /docs/; keep the FSM spec as the top-level reference; cross-link Guardian constraint repo docs.
+
+Required Format/Data/Output:
+
+“Bring-Up and Validation,” “Remediation Scenarios,” “Signal Playbooks,” “Constraint Tuning & Learning,” “Bridge Failover Drills,” “Release/Rollback.”
+
+This single document is the authoritative execution plan. All cited components are present or specified above with exact outputs and interfaces; follow the checklist sequencing and constraints to deliver a fully functioning, self-healing, agent-operable trading system.

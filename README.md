@@ -1,12 +1,49 @@
-# eafix Trading System Tools
+# eafix - Trading System with APF Integration
 
-This repository contains placeholder trading-system utilities and a basic economic
-calendar processing scaffold. The tools in `tools/` emit deterministic outputs,
-allowing early-stage pipelines to be wired without depending on real trading
-infrastructure.
+This repository contains a comprehensive trading system combining traditional trading tools 
+with the Atomic Process Framework (APF). It includes trading utilities, economic calendar 
+processing, and a unified desktop interface for MetaTrader 4 integration.
 
-Run the test suite with:
+## Features
 
+- **Trading System Tools**: Placeholder utilities for early-stage pipeline development
+- **APF Integration**: Process automation framework with diagnostics and validation
+- **Desktop GUI**: Unified interface with MetaTrader 4 integration
+- **Signal Processing**: Friday volatility signals and currency strength analytics
+- **Guardian System**: Comprehensive constraint-based trading protection
+
+## Project Structure
+
+- `src/` – Application source code (`eafix` package and submodules)
+- `tests/` – Unit tests and integration tests
+- `tools/` – Trading analysis and validation tools
+- `docs/` – Documentation, reference material, and guides
+- `core/` – Core trading system components
+- `tabs/` – GUI tab interfaces
+- `settings.json` – Configuration settings
+
+## Quick Start
+
+Run the test suite:
 ```bash
 pytest -q
 ```
+
+Launch the trading system:
+```bash
+python launch_trading_system.py
+```
+
+## Launching the Desktop GUI with MetaTrader 4
+
+The desktop application automatically launches MetaTrader 4 if the `terminal.exe` 
+executable can be located. The launcher checks the `MT4_PATH` environment variable 
+first and falls back to common installation paths on Windows.
+
+Helper scripts for desktop shortcuts:
+
+- `launch_gui.bat` – Windows batch file
+- `launch_gui.sh` – POSIX shell script
+
+Both scripts execute `python -m eafix.apps.desktop.main` which starts MetaTrader 4 
+(if available) and then the Python GUI.

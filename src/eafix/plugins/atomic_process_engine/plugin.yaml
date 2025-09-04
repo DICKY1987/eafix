@@ -1,0 +1,19 @@
+id: atomic_process_engine
+name: "Atomic Process Engine"
+version: "0.1.0"
+entrypoint: "plugins.atomic_process_engine.plugin:run"
+capabilities:
+  - command: run
+    inputs:
+      input_file: {type: path, required: true}
+      formats: {type: list[str], default: ["md", "drawio", "json", "yaml"]}
+      output_dir: {type: path, default: "derived"}
+      validate: {type: bool, default: true}
+    outputs:
+      artifacts: {type: list[path]}
+      diagnostics: {type: list[object]}
+policies:
+  io:
+    read: ["*.yaml", "*.yml"]
+    write: ["*.md", "*.json", "*.yaml", "*.drawio"]
+  network: false

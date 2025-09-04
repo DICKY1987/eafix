@@ -1,0 +1,384 @@
+Main Task: Build and Operate the FX Derivatives–Expiry Signal System (Python ⇄ MT4, no Excel)
+
+Sub-task: Stand up the local Python Expiry Service API
+
+Constraint: Absolutely no Excel anywhere in pipeline; local-only HTTP (default http://127.0.0.1:5001); Windows/MT4 environment; timezone America/Chicago; today’s date is September 3, 2025.
+
+Required Format/Data/Output:
+
+Install deps: pip install fastapi uvicorn pydantic.
+
+Run service: python expiry_service.py.
+
+Endpoints implemented (local only):
+
+/health (JSON)
+
+/expiries?symbol=SYMBOL (JSON snapshot)
+
+/expiries.csv?symbol=SYMBOL (CSV for MT4 parsing)
+
+/signals?symbol=SYMBOL (JSON booleans/metadata)
+
+/spot?symbol=SYMBOL&price=X.Y (testing override)
+
+Use the provided stub: expiry_service.py (delivered) and extend with:
+
+Scraper module (pluggable) to ingest public FX options expiry posts.
+
+SQLite store for normalized records (optional at first; in-memory is acceptable to start).
+
+Computed features: pin_score (0–100), distance_pips, pre_post (PRE/POST), compression_ratio, cluster_density, speed_pips_5m, atr_14 (ATR via your existing volatility.py).
+
+Configuration block with tunable thresholds (see Signal Set below).
+
+Sub-task: Wire MT4 indicators to the local API
+
+Constraint: MT4 must explicitly allow WebRequest to http://127.0.0.1:5001; polling interval 30–60s; no DLL; CSV parsing preferred (robust).
+
+Required Format/Data/Output:
+
+Add URL in MT4: Tools → Options → Expert Advisors → “Allow WebRequest” list → http://127.0.0.1:5001.
+
+Install indicators (provided stubs):
+
+ExpiryZones.mq4 — chart overlay drawing strike lines and ±zone, colored by PRE/POST, width by size rank (S/M/L/XL). Fetches /expiries.csv?symbol=....
+
+PinPressure.mq4 — separate window oscillator (0–100) reflecting nearest strike pin_score. Also maintains a calculation buffer for nearest distance_pips.
+
+Objects naming convention: EXPZ_{symbol}_{strike}_{expiryTs} for lines/zones/labels; auto-clean on refresh.
+
+Sub-task: Implement the Expiry Signal Set (S1–S8) in Python and expose via /signals
+
+Constraint: All thresholds must be parameters; PRE/POST logic must respect expiry timestamps; avoid trading during broker high-spread conditions if integrating to an EA.
+
+Required Format/Data/Output:
+
+Signals computed per symbol (JSON):
+
+S1 Pin Reversion (PRE): pin_score ≥ pin_min and distance_pips ≤ pin_pips_max and compression low.
+
+S2 Gamma Wall Touch (PRE scalp): size_rank ∈ {L,XL} and distance_pips ≤ wall_touch and fast approach.
+
+S3 Cluster Magnet (PRE): cluster_density ≥ cluster_min and average pin across nearest ≥ pin_min_cluster.
+
+S4 Post-Expiry Burst (POST): within burst_window_mins, escape ≥ burst_trigger_pips with speed confirmation.
+
+S5 Compression → Expansion (PRE→POST): compression_ratio ≤ comp_low pre-expiry, first break post-expiry ≥ break_pips.
+
+S6 Pin-Break Fail (fakeout, PRE): strong pin (≥ pin_strong), brief break beyond fakeout_pips then re-entry within fakeout_window_sec.
+
+S7 Layered Expiries Alignment (bias): signed “gravity” vector of layered strikes beyond threshold.
+
+S8 Quarter-End Basis Risk (special filter): calendar window flag modifies which signals are enabled and with tighter risk caps.
+
+Default parameter pack (tunable):
+pin_min=65, pin_strong=75, pin_pips_max=22, wall_touch=10, burst_trigger_pips=18, burst_window_mins=45, break_pips=22, comp_low=0.5, speed_min=6 (pips/5m), cluster_min=0.6, ATR_k=1.2
+
+Response structure (example):
+
+{
+  "symbol":"EURUSD",
+  "ts_utc":"2025-09-03T20:20:00Z",
+  "S1_pin_reversion":{"active":true,"context":"pin=83 dist=12"},
+  "S2_gamma_wall_touch":{"active":false,"context":""},
+  "S4_post_expiry_burst":{"active":false,"context":""},
+  "S5_compression_expansion":{"active":true,"context":"CR=0.42"}
+}
+
+
+Sub-task: (Optional) MT4 EA integration
+
+Constraint: EA must not call HTTP directly; it should read indicator buffers/GlobalVariables or file outputs; enforce risk controls (spread/session/news blackout).
+
+Required Format/Data/Output:
+
+EA reads iCustom buffers from PinPressure and internal state from ExpiryZones (via GlobalVariables or Files).
+
+Entries/exits per signal spec S1–S8 with ATR-based SL/TP and time stops; logs all actions.
+
+Main Task: Backtest the Conditional-Probability Framework for Price Continuation
+
+Sub-task: Event-log builder (Python)
+
+Constraint: Use historical tick/intraday bar data; persist outcomes without Excel; use SQLite/Parquet/CSV.
+
+Required Format/Data/Output:
+
+For each minute and active strike window, record: pin_score, distance_pips, pre_post, compression_ratio, cluster_density, speed, spot, atr, session.
+
+Compute outcomes at horizons: 15m, 1h, 4h, 8h, 12h, 24h → {MFE, MAE, hit_+X, hit_-Y, time_to_breakout}.
+
+Sub-task: Setup definition per signal
+
+Constraint: Match live signal conditions exactly (same thresholds).
+
+Required Format/Data/Output: JSON spec per signal with parameter ranges for grid search.
+
+Sub-task: Conditional probability computation
+
+Constraint: No external inference; use empirics over the recorded sample.
+
+Required Format/Data/Output: Tables per signal: P( +25p in 3h | setup ), E[R], drawdown stats; export Markdown and CSV.
+
+Sub-task: Parameter optimization
+
+Constraint: Avoid overfitting (walk-forward or K-fold by week/month).
+
+Required Format/Data/Output: Report with chosen thresholds and robustness diagnostics; save a versioned signals_config.json.
+
+Main Task: Build the DDE Price-Import Tab + Currency Strength & % Change Indicators (MT4/GUI)
+
+Sub-task: DDE feed setup
+
+Constraint: MT4 DDE is the main price feed for price-derived indicators/signals; GUI is Python or MT4 (no Excel).
+
+Required Format/Data/Output: Configure and validate DDE import into your GUI/indicator system; log reconnects and data gaps.
+
+Sub-task: Percent-change calculations
+
+Constraint: Compute for each imported pair and for currency-level strength over windows:
+15m, 1h, 4h, 8h, 12h, 24h.
+
+Required Format/Data/Output:
+
+Pair-level %Δ = (Price_now - Price_t0)/Price_t0 * 100 at each window.
+
+Currency Strength Indicator (CSI): aggregate pair-level normalized returns across all crosses containing the currency, with optional volatility-weighting.
+
+Expose via GUI tabs and/or MT4 buffers; provide alerts on threshold crossings.
+
+Sub-task: Integration
+
+Constraint: DDE serves as the common price feed for all “price-to-rise” category signals and the expiry system.
+
+Required Format/Data/Output: Unified data bus object (or file) readable by all indicators; heartbeat + health panel.
+
+Main Task: Transform “Guardian” into a Self-Healing, Constraint-Based Monitoring & Remediation System
+
+Sub-task: Replace static health checks with a TradingConstraintRepository
+
+Constraint: Dynamic constraints stored in SQLite; context-aware queries; zero Excel; Python-only.
+
+Required Format/Data/Output: Class TradingConstraintRepository(db_path) with:
+
+CRUD for constraints, tags (market_session, symbol_type, etc.).
+
+query_constraints(context: Dict) -> List[TradingConstraint].
+
+Sub-task: Observability layers
+
+Constraint: Real-time vitals (CPU/mem/disk/net), app metrics, tracing (where applicable), structured logs, synthetic monitors.
+
+Required Format/Data/Output: Python services and config (guardian_implementation.py, system_monitor.py) extended to:
+
+Publish JSON metrics; anomaly detection; threshold alerts; correlation engine.
+
+Sub-task: Automated response
+
+Constraint: Circuit breakers, auto-scaling hooks, failover to backup workflows, self-repair (restart/rollback/config patch).
+
+Required Format/Data/Output: guardian_remediation.py implementing:
+
+Remediation playbooks selected by constraint matches; safety checks; audit logs.
+
+Sub-task: Health → Signals bridge
+
+Constraint: If expiry service or DDE feed degrades, switch to alternate workflow (cached data, reduced features) without halting trading.
+
+Required Format/Data/Output: State machine JSON + tests; dashboard status page.
+
+Main Task: Repository Operations & Git Hygiene
+
+Sub-task: One-shot salvage & push (user requested automatic reset)
+
+Constraint: Destructive; must preserve a local snapshot before reset; apply only to the current repo.
+
+Required Format/Data/Output: Script sequence:
+
+git status
+mkdir -p _salvage && git ls-files -m -o --exclude-standard | zip -@ _salvage/local_changes.zip
+git add -A
+git commit -m "salvage: checkpoint all local changes"
+git branch backup/$(date +%Y%m%d-%H%M%S)
+git fetch --all --prune
+git reset --hard origin/MAIN_OR_DEFAULT_BRANCH
+git merge backup/<timestamp> --allow-unrelated-histories -m "salvage merge"
+git push -u origin HEAD
+
+
+Replace MAIN_OR_DEFAULT_BRANCH with repo’s default (e.g., main/master).
+
+Sub-task: Normal workflow for agentic commits
+
+Constraint: Use branches and clear commit messages; push via PAT/SSH; no secrets in code.
+
+Required Format/Data/Output:
+
+Branch naming: lane/ai-coding/<feature>, lane/docs/<topic>, etc.
+
+PR template including risk summary, test evidence, and configs changed.
+
+Main Task: Documentation Consolidation & Canonicalization
+
+Sub-task: Remove Excel references across docs
+
+Constraint: System now communicates MT4 ⇄ Python directly; all graphical displays via Python/MT4; no Excel component.
+
+Required Format/Data/Output: Update master spec and any child docs to eliminate Excel flows; record change log.
+
+Sub-task: Apply “v3.3 insert pack” and then “v3.5 insert pack” to master
+
+Constraint: Maintain parent-child doc hierarchy; mark protocol migrations.
+
+Required Format/Data/Output: Patched spec (Markdown), with a migration checklist.
+
+Sub-task: Thorough doc validation
+
+Constraint: Ensure everything “In Sync,” properly ordered and indexed; cross-link detailed views to parents.
+
+Required Format/Data/Output: Validation report + updated ToC.
+
+Main Task: Canonical Subsystem IDs & File Audit System
+
+Sub-task: Implement subsystem_registry.yaml (single source of truth)
+
+Constraint: Use provided schema pattern; map legacy refs, path prefixes, owners, file patterns.
+
+Required Format/Data/Output: YAML file populated for all subsystems in v3.1+.
+
+Sub-task: Mapper + Generator + Orchestrator + Tests
+
+Constraint: Auto-generate paths and IDs from the registry; tests must cover mapping fidelity.
+
+Required Format/Data/Output: Python modules and unit tests; CI job added to run tests.
+
+Sub-task: File Audit System (purpose and components)
+
+Constraint: Must classify files into audit categories (CORE/CONFIG/TEST/LEGACY/etc.).
+
+Required Format/Data/Output:
+
+Scanner over repo; outputs JSON and Markdown reports of files per category, with confidence and reasons.
+
+Mermaid diagram: show how each subsystem maps to audit categories (keep it simplified and readable).
+
+Main Task: System UI & Testing Improvements
+
+Sub-task: Health & status UI
+
+Constraint: Clear indication system is functioning; pinpoint failures quickly; no Excel.
+
+Required Format/Data/Output:
+
+Status panel (Python web or MT4 panel) showing: DDE heartbeat, Expiry API health, Signals active/inactive, Guardian status.
+
+Red/amber/green states with drill-down logs.
+
+Sub-task: Automated tests
+
+Constraint: Tests must be runnable locally/CI; include edge cases (API down, DDE lag, stale data).
+
+Required Format/Data/Output: Pytests for Python services; MT4 strategy tester scripts for indicator stability; artifacts stored per run.
+
+Main Task: Template Synthesis & Document Filling
+
+Sub-task: Multi-document → template extraction
+
+Constraint: Only populate fields with content explicitly present in source docs; do not hallucinate.
+
+Required Format/Data/Output:
+
+For each template field: best extract from provided documents; if not present, leave blank.
+
+Provide source attributions per field (doc + section/line if available).
+
+Output as Markdown file.
+
+Main Task: Repo/Project Analysis Tasks
+
+Sub-task: Analyze eafix repository (if provided)
+
+Constraint: Do not browse unless explicitly allowed; otherwise, analyze only provided content.
+
+Required Format/Data/Output: System overview, components, dependencies, gaps; Markdown report.
+
+Main Task: File Utilities
+
+Sub-task: Unique file extensions list from a provided document
+
+Constraint: No web; only from the input doc.
+
+Required Format/Data/Output: One-per-line unique extensions sorted ascending; output as Markdown and plain .txt.
+
+Main Task: Prompt & Authoring Enhancements
+
+Sub-task: Improve prompts and codex/spec authoring templates
+
+Constraint: Preserve system’s phrasing/roles; ground all statements in provided inputs only.
+
+Required Format/Data/Output: Updated prompt blueprints (XML/Markdown) with placeholders; validation checklist.
+
+Main Task: Packaging & Delivery
+
+Sub-task: Provide immediately usable artifacts
+
+Constraint: Must be drop-in; no missing dependencies; no Excel.
+
+Required Format/Data/Output:
+
+Delivered files (already provided):
+
+expiry_service.py (Python FastAPI) — downloadable
+
+ExpiryZones.mq4 (MT4 indicator) — downloadable
+
+PinPressure.mq4 (MT4 indicator) — downloadable
+
+Integration steps (documented in README): MT4 WebRequest config, how to run service, how to attach indicators.
+
+Main Task: Operations & Scheduling
+
+Sub-task: Service reliability
+
+Constraint: Windows service or scheduled task for Python API; watchdog restarts.
+
+Required Format/Data/Output: NSSM/Task Scheduler config; logs rotation policy; health-check pings.
+
+Sub-task: Periodic documentation review
+
+Constraint: User preference: keep a running list of current docs and review every 10 responses.
+
+Required Format/Data/Output: Review reminder schedule; checklist of documents to revisit; change summary.
+
+Main Task: Compliance & Safety
+
+Sub-task: Data sourcing and rate limits
+
+Constraint: Respect site ToS if scraping; cache; set scrape cadence to 2–4×/day (or per source cadence); prices refreshed 5–15s if available.
+
+Required Format/Data/Output: Configurable scheduler and cache; backoff logic.
+
+Sub-task: Secrets management
+
+Constraint: No secrets in repo; use environment variables/Windows Credential Manager.
+
+Required Format/Data/Output: .env.example, loader, and documentation.
+
+Immediate Assets (already delivered for execution)
+
+expiry_service.py — local API with demo data and signal scaffolding.
+
+ExpiryZones.mq4 — overlay drawing expiry strikes/zones via /expiries.csv.
+
+PinPressure.mq4 — oscillator of nearest strike pin score (0–100).
+
+Execution Notes
+
+Start by running the Python service and attaching both indicators to a major (e.g., EURUSD). You should see strike lines/labels and a live PinPressure value using the demo dataset.
+
+Replace the demo data with the scraper + SQLite once visuals are verified.
+
+Proceed to enable /signals with S1–S8 and then integrate to an EA if desired.
+
+In parallel, execute the DDE/CSI percent-change dashboard (no Excel) so your “price-to-rise” signals and expiry context share the same live feed.
