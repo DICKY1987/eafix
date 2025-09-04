@@ -1,0 +1,347 @@
+# Guardian Health Checks - Trading-Specific Configuration
+health_checks:
+  # EA Heartbeat Monitoring
+  - name: ea_heartbeat
+    type: "mt4_ea_heartbeat"
+    symbol: "*"
+    timeout: 2s
+    interval: 10s
+    degrade_after: 3   # consecutive failures
+    critical_after: 5
+    recovery_verification: 2  # consecutive successes to recover
+    
+  # Bridge Performance Monitoring
+  - name: bridge_latency_socket
+    type: "bridge_latency"
+    transport: "socket"
+    interval: 10s
+    thresholds:
+      warn_ms: "ema*1.5"   # adaptive baseline
+      crit_ms: 500
+      baseline_window: 100  # samples for EMA
+    hysteresis:
+      promote_after: "3_of_5"
+      demote_after: "2_of_3"
+      
+  - name: bridge_latency_csv
+    type: "bridge_latency"
+    transport: "csv"
+    interval: 15s
+    thresholds:
+      warn_ms: "ema*2.0"
+      crit_ms: 2000
+      
+  # Database Health Monitoring
+  - name: sqlite_integrity
+    type: "sqlite_check"
+    db_path: "data/huey.db"
+    mode: "wal"
+    interval: 5m
+    timeout: 10s
+    checks:
+      - integrity_check
+      - wal_checkpoint_health
+      - schema_validation
+      - connection_pool_status
+      
+  # System Resource Monitoring
+  - name: disk_space
+    type: "system_metric"
+    metric: "disk_free_gb"
+    threshold_min: 2
+    interval: 30s
+    predictive_trend: true
+    
+  - name: memory_usage
+    type: "system_metric"
+    metric: "memory_usage_pct"
+    thresholds:
+      warn: 80
+      crit: 90
+    interval: 30s
+    
+  # Risk Exposure Monitoring
+  - name: risk_exposure
+    type: "risk_metric"
+    max_per_trade_pct: 2.5
+    max_drawdown_pct: 10
+    max_correlation: 0.8
+    interval: 15s
+    per_symbol: true
+    
+  # Broker Reconciliation
+  - name: broker_reconciliation
+    type: "broker_sync"
+    interval: 60s
+    max_lag_seconds: 30
+    position_tolerance_pips: 0.1
+    
+  # Economic Calendar Health
+  - name: calendar_feed
+    type: "data_feed"
+    source: "economic_calendar"
+    staleness_threshold: "1h"
+    interval: 5m
+
+# Alert Rules → Remediation Mapping
+alerts:
+  # EA Communication Issues
+  - name: ea_unresponsive
+    condition: "ea_heartbeat==fail for 3 cycles"
+    severity: "critical"
+    auto_remediation: "recover_ea"
+    escalate_after: "10m"
+    
+  - name: ea_degraded
+    condition: "ea_heartbeat==degraded for 5 cycles"
+    severity: "major"
+    auto_remediation: "reset_ea_communication"
+    
+  # Bridge Performance Issues
+  - name: bridge_flap
+    condition: "bridge_latency_socket>crit for 2 cycles"
+    severity: "major"
+    auto_remediation: "failover_to_csv"
+    
+  - name: bridge_total_failure
+    condition: "bridge_latency_socket==fail AND bridge_latency_csv==fail"
+    severity: "critical"
+    auto_remediation: "engage_emergency_mode"
+    escalate_immediately: true
+    
+  # Database Issues
+  - name: db_corruption
+    condition: "sqlite_integrity==fail"
+    severity: "critical"
+    auto_remediation: "db_repair_or_restore"
+    
+  - name: db_performance_degraded
+    condition: "sqlite_integrity==degraded for 3 cycles"
+    severity: "major"
+    auto_remediation: "db_maintenance"
+    
+  # Risk Management
+  - name: risk_breach
+    condition: "risk_exposure>limits"
+    severity: "critical"
+    auto_remediation: "engage_kill_switch"
+    latch_required: true
+    
+  - name: correlation_spike
+    condition: "risk_exposure.correlation>0.8"
+    severity: "major"
+    auto_remediation: "reduce_correlated_positions"
+    
+  # System Resources
+  - name: disk_critically_low
+    condition: "disk_space<1GB"
+    severity: "critical"
+    auto_remediation: "emergency_cleanup"
+    
+  - name: memory_pressure
+    condition: "memory_usage>90%"
+    severity: "major"
+    auto_remediation: "memory_optimization"
+
+# Remediation Playbooks
+remediation_playbooks:
+  # EA Recovery Procedures
+  recover_ea:
+    max_duration: "5m"
+    steps:
+      - name: "quiesce_commands"
+        action: "pause_new_commands"
+        timeout: "30s"
+      - name: "reset_bridges"
+        action: "reset_all_communication_channels"
+        timeout: "10s"
+      - name: "ea_restart"
+        action: "restart_ea_via_dde"
+        timeout: "60s"
+        retry_attempts: 3
+      - name: "resync_positions"
+        action: "reconcile_with_broker"
+        timeout: "30s"
+      - name: "verify_heartbeat"
+        action: "confirm_ea_responsive"
+        timeout: "15s"
+        success_criteria: "2_consecutive_heartbeats"
+        
+  # Bridge Failover
+  failover_to_csv:
+    max_duration: "2m"
+    steps:
+      - name: "sequence_boundary"
+        action: "quiesce_commands_at_seq_boundary"
+        timeout: "15s"
+      - name: "switch_bridge"
+        action: "activate_csv_bridge"
+        timeout: "5s"
+      - name: "monitor_latency"
+        action: "verify_csv_performance"
+        duration: "30s"
+        success_criteria: "latency<2000ms"
+      - name: "background_recovery"
+        action: "attempt_socket_recovery"
+        async: true
+        max_attempts: 10
+        
+  # Database Recovery
+  db_repair_or_restore:
+    max_duration: "10m"
+    steps:
+      - name: "emergency_backup"
+        action: "create_immediate_backup"
+        timeout: "60s"
+      - name: "integrity_repair"
+        action: "sqlite_pragma_integrity_check_repair"
+        timeout: "120s"
+      - name: "restore_if_fail"
+        condition: "integrity_repair==failed"
+        action: "restore_latest_backup"
+        timeout: "180s"
+      - name: "verify_schema"
+        action: "validate_schema_and_wal"
+        timeout: "30s"
+      - name: "reopen_connections"
+        action: "reinitialize_db_pool"
+        timeout: "15s"
+        
+  # Risk Management Kill Switch
+  engage_kill_switch:
+    max_duration: "2m"
+    latch_required: true  # Manual intervention needed to reset
+    steps:
+      - name: "disable_new_trades"
+        action: "set_trading_disabled_flag"
+        timeout: "1s"
+      - name: "close_positions"
+        action: "close_positions_graceful"
+        timeout: "90s"
+        policy: "graceful"  # vs "hard"
+        max_slippage_pips: 5
+      - name: "latch_system"
+        action: "require_manual_relatch"
+        conditions:
+          - "manual_relatch_by_authorized_user"
+          - "all_metrics_green_for_2m"
+          
+  # Emergency Mode
+  engage_emergency_mode:
+    max_duration: "immediate"
+    steps:
+      - name: "preserve_state"
+        action: "emergency_state_checkpoint"
+        timeout: "5s"
+      - name: "disable_automation"
+        action: "switch_to_manual_mode"
+        timeout: "1s"
+      - name: "notify_human"
+        action: "send_critical_alert"
+        channels: ["sms", "email", "desktop"]
+        
+# State Machine Configuration
+state_machine:
+  states:
+    - name: "Healthy"
+      description: "All systems operating normally"
+      entry_conditions:
+        - "all_health_checks_pass"
+        - "no_active_alerts"
+      
+    - name: "Degraded"
+      description: "Performance issues detected"
+      entry_conditions:
+        - "N_consecutive_health_check_failures"
+        - "performance_below_baseline"
+      
+    - name: "Recovering"
+      description: "Remediation in progress"
+      entry_conditions:
+        - "auto_remediation_playbook_started"
+      timeout: "10m"  # Max recovery time
+      
+    - name: "SafeMode"
+      description: "Automated trading disabled"
+      entry_conditions:
+        - "recovery_failed"
+        - "circuit_breaker_open"
+        - "risk_breach_with_latch"
+      
+  transitions:
+    - from: "Healthy"
+      to: "Degraded"
+      condition: "N_consecutive_breaches"
+      
+    - from: "Degraded"
+      to: "Recovering"
+      condition: "playbook_started"
+      
+    - from: "Recovering"
+      to: "Healthy"
+      condition: "verify_ok_for_M_cycles"
+      
+    - from: "Recovering"
+      to: "SafeMode"
+      condition: "verify_fail OR breaker_open"
+      
+    - from: "SafeMode"
+      to: "Healthy"
+      condition: "manual_relatch AND green_M_cycles"
+
+# Command Envelope Template
+command_envelope:
+  schema:
+    cmd_seq: "monotonic_integer"
+    idempotency_key: "timestamp_based_uuid"
+    op: "TRADE_OPERATION_TYPE"
+    symbol: "currency_pair"
+    parameters: "operation_specific_params"
+    constraints:
+      max_slippage_pips: "integer"
+      timeout_seconds: "integer"
+    deadline_ts: "iso8601_timestamp"
+    trace_id: "distributed_trace_id"
+    config_version: "semantic_version"
+    
+# Circuit Breaker Configuration
+circuit_breakers:
+  # Per-symbol breakers
+  per_symbol:
+    failure_threshold: 3
+    recovery_timeout: "2m"
+    half_open_probe_count: 1
+    
+  # System-wide breakers
+  system_wide:
+    failure_threshold: 5
+    recovery_timeout: "5m"
+    emergency_threshold: 10  # Immediate safe mode
+    
+# Chaos Engineering Drills
+chaos_drills:
+  - name: "socket_latency_injection"
+    type: "network_delay"
+    target: "socket_bridge"
+    delay_ms: "500-2000"
+    duration: "2m"
+    
+  - name: "csv_file_lock"
+    type: "file_lock"
+    target: "trading_signals.csv"
+    duration: "30s"
+    
+  - name: "ea_hang_simulation"
+    type: "process_freeze"
+    target: "mt4_terminal"
+    duration: "1m"
+    
+  - name: "db_corruption_test"
+    type: "data_corruption"
+    target: "huey.db"
+    corruption_type: "wal_corruption"
+    
+  - name: "disk_pressure_test"
+    type: "disk_fill"
+    target: "system_drive"
+    free_space_target: "500MB"
