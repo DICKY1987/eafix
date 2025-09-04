@@ -1,9 +1,11 @@
 import re
 from pathlib import Path
-import yaml
+
+import pytest
+yaml = pytest.importorskip("yaml")
 
 ROOT = Path(__file__).resolve().parents[2]
-ACTORS = ROOT / "registries" / "actors.yaml"
+ACTORS = ROOT / "src" / "eafix" / "registries" / "actors.yaml"
 
 ID_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 KINDS = {"HUMAN", "CORE", "PLUGIN", "SERVICE", "STORAGE"}
