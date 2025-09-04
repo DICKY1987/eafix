@@ -1,0 +1,38 @@
+*** NOTE ***
+This is a conceptual patch describing the minimal change required to thread window context
+through the indicator engine without altering your existing data model drastically.
+
+--- a/indicator_engine.py
++++ b/indicator_engine.py
+@@
+ class IndicatorInstance:
+@@
+-    def to_signal(self) -> Dict[str, Any]:
+-        return {
+-            "symbol": self.symbol,
+-            "indicator": self.name,
+-            "status": self.status,           # EXP|VAL|TEST|PROD
+-            "bias": self.bias,               # LONG|SHORT|BOTH|NONE
+-            "duration": self.duration,       # FLASH|QUICK|LONG|EXTENDED|NONE
+-            "proximity": self.proximity,     # NONE for technicals; event buckets otherwise
+-            "params": self.params,
+-        }
++    def to_signal(self) -> Dict[str, Any]:
++        ctx = None
++        wm = self.params.get("window_minutes")
++        if isinstance(wm, int) and wm > 0:
++            ctx = f"CTX:W{wm}"
++        return {
++            "symbol": self.symbol,
++            "indicator": self.name,
++            "status": self.status,           # EXP|VAL|TEST|PROD
++            "bias": self.bias,               # LONG|SHORT|BOTH|NONE
++            "duration": self.duration,       # FLASH|QUICK|LONG|EXTENDED|NONE
++            "proximity": self.proximity,     # NONE for technicals; event buckets otherwise
++            "context": ctx or "CTX:NONE",
++            "params": self.params,
++        }
+@@
+ # When emitting signals to the matrix / DB layer,
+-# ensure 'context' is included if window_minutes exists.
++# ensure 'context' is included if window_minutes exists.
