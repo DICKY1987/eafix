@@ -2,7 +2,7 @@
 
 > **Architecture**: Reduced 4D Matrix with Conditional Duration Logic  
 > **Version**: 3.0  
-> **Total Combinations**: 652 per symbol (deterministic)  
+> **Total Combinations**: 1008 per symbol (deterministic)
 > **Generation Limit**: Hard stop after R2  
 
 This document presents the complete implementation of the **Reduced Multi-Dimensional Reentry Matrix System v3.0**, incorporating updated signal types and all transformations specified in the comprehensive change specification from the baseline system.
@@ -15,7 +15,7 @@ This document presents the complete implementation of the **Reduced Multi-Dimens
 
 The system implements a **4D matrix** with conditional complexity over the following canonical dimensions:
 
-- **Signal Types (S = 7)** - Updated canonical set:
+- **Signal Types (S = 8)** - Updated canonical set:
   - `ECO_HIGH` — High-impact economic events
   - `ECO_MED` — Medium-impact economic events  
   - `ANTICIPATION_1HR` — Pre-event positioning trades 1 hour before economic event
@@ -31,7 +31,7 @@ The system implements a **4D matrix** with conditional complexity over the follo
   - `LONG`: **61-480** min (lower risk)
   - `EXTENDED`: **481-1440** min (minimal event risk)
 
-- **Trade Outcomes (O = 6)** — `{1: FULL_SL, 2: PARTIAL_LOSS, 3: BREAKEVEN, 4: PARTIAL_PROFIT, 5: FULL_TP, 6: BEYOND_TP}`
+- **Trade Outcomes (O = 6)** — `{WIN, LOSS, BE, SKIP, REJECT, CANCEL}`
 
 - **Reentry Duration Categories (K)** — **Conditional application**:
   - **For ECO_HIGH & ECO_MED only**: `FLASH` (0-15min), `QUICK` (16-60min), `LONG` (61-90min), `EXTENDED` (>90min)
@@ -48,7 +48,7 @@ from datetime import datetime
 import json
 from pathlib import Path
 
-# UPDATED v3.0: Exactly 7 canonical signals with regional and temporal specificity
+# UPDATED v3.0: Exactly 8 canonical signals with regional and temporal specificity
 SIGNALS = [
     "ECO_HIGH", "ECO_MED", 
     "ANTICIPATION_1HR", "ANTICIPATION_8HR",
@@ -59,10 +59,7 @@ SIGNALS = [
 # UPDATED v3.0: Future proximity replaces market context
 FUTURE_PROX = ["IMMEDIATE", "SHORT", "LONG", "EXTENDED"]
 
-OUTCOMES = {
-    1: "FULL_SL", 2: "PARTIAL_LOSS", 3: "BREAKEVEN",
-    4: "PARTIAL_PROFIT", 5: "FULL_TP", 6: "BEYOND_TP"
-}
+OUTCOMES = ["WIN", "LOSS", "BE", "SKIP", "REJECT", "CANCEL"]
 
 # UPDATED v3.0: Duration applies only to ECO_HIGH/ECO_MED
 DURATION_SIGNALS = {"ECO_HIGH", "ECO_MED"}
@@ -80,11 +77,11 @@ class ReentryMatrix:
     4D matrix over: Signal × Duration(conditional) × Outcome × FutureEventProximity
     
     Key Features:
-    - 7 canonical signals with conditional duration logic
+    - 8 canonical signals with conditional duration logic
     - ECO_HIGH/ECO_MED use 4 duration categories for reentries
     - All other signals (ANTICIPATION_*, EQUITY_OPEN_*, ALL_INDICATORS) use NO_DURATION 
     - Hard stop after R2 generation
-    - 652 combinations per symbol deterministic
+    - 1008 combinations per symbol deterministic
     - Future-event proximity replaces market context
     """
     
@@ -112,12 +109,12 @@ class ReentryMatrix:
             },
             
             "outcomes": {
-                1: {"name": "FULL_SL", "desc": "Hit stop loss exactly", "severity": "HIGH"},
-                2: {"name": "PARTIAL_LOSS", "desc": "Loss between SL and BE", "severity": "MEDIUM"},
-                3: {"name": "BREAKEVEN", "desc": "Closed at breakeven", "severity": "LOW"},
-                4: {"name": "PARTIAL_PROFIT", "desc": "Profit between BE and TP", "severity": "POSITIVE"},
-                5: {"name": "FULL_TP", "desc": "Hit take profit exactly", "severity": "GOOD"},
-                6: {"name": "BEYOND_TP", "desc": "Exceeded take profit", "severity": "EXCELLENT"}
+                "WIN": {"desc": "Position closed in profit", "severity": "POSITIVE"},
+                "LOSS": {"desc": "Position closed in loss", "severity": "NEGATIVE"},
+                "BE": {"desc": "Closed at breakeven", "severity": "NEUTRAL"},
+                "SKIP": {"desc": "Trade skipped", "severity": "NEUTRAL"},
+                "REJECT": {"desc": "Rejected before execution", "severity": "NEUTRAL"},
+                "CANCEL": {"desc": "Cancelled after submission", "severity": "NEUTRAL"}
             },
             
             # UPDATED v3.0: Future proximity replaces market context
@@ -151,7 +148,7 @@ class ReentryMatrix:
             for outcome in self.dimensions["outcomes"]:
                 self.matrix[signal_type][outcome] = {}
                 for proximity in self.dimensions["future_event_proximity"]:
-                    combination_id = f"O::{signal_type}::{outcome}::{proximity}"
+                    combination_id = f"O:{signal_type}:{proximity}:{outcome}"
                     self.matrix[signal_type][outcome][proximity] = self.default_rules.get_default_cell(
                         signal_type, None, outcome, proximity, generation=0
                     )
@@ -165,7 +162,7 @@ class ReentryMatrix:
                     for duration in self.dimensions["reentry_time_categories"]:
                         for outcome in self.dimensions["outcomes"]:
                             for proximity in self.dimensions["future_event_proximity"]:
-                                combination_id = f"R{generation}::{signal_type}::{duration}::{outcome}::{proximity}"
+                                combination_id = f"R{generation}:{signal_type}:{duration}:{proximity}:{outcome}"
                                 # Store with duration key
                                 if duration not in self.matrix[signal_type]:
                                     self.matrix[signal_type][duration] = {}
@@ -178,7 +175,7 @@ class ReentryMatrix:
                     # All other signals: Use NO_DURATION
                     for outcome in self.dimensions["outcomes"]:
                         for proximity in self.dimensions["future_event_proximity"]:
-                            combination_id = f"R{generation}::{signal_type}::NO_DURATION::{outcome}::{proximity}"
+                            combination_id = f"R{generation}:{signal_type}:{proximity}:{outcome}"
                             # Store with NO_DURATION key
                             if "NO_DURATION" not in self.matrix[signal_type]:
                                 self.matrix[signal_type]["NO_DURATION"] = {}
@@ -414,11 +411,11 @@ class MatrixDataManager:
             "user_overrides": self._count_user_overrides(matrix),
             "architecture": "reduced_v3.0",
             "dimensions": {
-                "signals": 7,
+                "signals": 8,
                 "future_proximity": 4,
                 "outcomes": 6,
                 "durations": {"ECO_HIGH|ECO_MED": 4, "OTHER": 1},
-                "generations": 2
+                "generations": 3
             },
             "matrix_data": serializable_matrix
         }
@@ -442,12 +439,11 @@ class MatrixDataManager:
         return matrix_data['version']
     
     def _count_cells(self, matrix: Dict) -> int:
-        """UPDATED v3.0: Count total cells - returns 652 for the reduced system"""
-        # Originals: S × F = 7 × 4 = 28
-        # Reentries: 2 × [(2 signals × 4 durations × 6 outcomes × 4 prox) + (5 signals × 1 duration × 6 outcomes × 4 prox)]
-        #          = 2 × (192 + 120) = 624
-        # Total / symbol: 652
-        return 652
+        """UPDATED v3.0: Count total cells - returns 1008 for the reduced system"""
+        # Per generation: (2 signals × 4 durations × 6 outcomes × 4 prox)
+        #               + (6 signals × 1 duration × 6 outcomes × 4 prox) = 336
+        # Total / symbol with 3 generations: 336 × 3 = 1008
+        return 1008
 
 ### 4.2 JSON Storage Format
 
@@ -457,24 +453,24 @@ class MatrixDataManager:
   "version": "2025-08-17T12:00:00Z",
   "architecture": "reduced_v3.0",
   "dims": {
-    "signals": 7,
+    "signals": 8,
     "future_prox": 4,
     "outcomes": 6,
     "durations": {"ECO_HIGH|ECO_MED": 4, "OTHER": 1},
-    "generations": 2
+    "generations": 3
   },
   "matrix": {
     "ECO_HIGH": {
-      "FLASH": {"1": {"IMMEDIATE": {...}, "SHORT": {...}, "LONG": {...}, "EXTENDED": {...}}},
+      "FLASH": {"WIN": {"IMMEDIATE": {...}, "SHORT": {...}, "LONG": {...}, "EXTENDED": {...}}},
       "QUICK": {...},
       "LONG": {...},
       "EXTENDED": {...}
     },
     "ANTICIPATION_1HR": {
-      "NO_DURATION": {"1": {"IMMEDIATE": {...}, "SHORT": {...}, "LONG": {...}, "EXTENDED": {...}}}
+      "NO_DURATION": {"WIN": {"IMMEDIATE": {...}, "SHORT": {...}, "LONG": {...}, "EXTENDED": {...}}}
     },
     "EQUITY_OPEN_USA": {
-      "NO_DURATION": {"1": {"IMMEDIATE": {...}, "SHORT": {...}, "LONG": {...}, "EXTENDED": {...}}}
+      "NO_DURATION": {"WIN": {"IMMEDIATE": {...}, "SHORT": {...}, "LONG": {...}, "EXTENDED": {...}}}
     }
   }
 }
@@ -553,9 +549,9 @@ class MatrixPerformanceTracker:
 -- UPDATED v3.0: Split table structure with conditional duration
 -- Original combinations table (no duration dimension)
 CREATE TABLE original_combinations (
-    combination_id        TEXT PRIMARY KEY, -- O::{SIGNAL}::{OUTCOME}::{PROX}
+    combination_id        TEXT PRIMARY KEY, -- O:SIGNAL:PROX:OUTCOME
     signal_type           TEXT NOT NULL CHECK (signal_type IN ('ECO_HIGH','ECO_MED','ANTICIPATION_1HR','ANTICIPATION_8HR','EQUITY_OPEN_ASIA','EQUITY_OPEN_EUROPE','EQUITY_OPEN_USA','ALL_INDICATORS')),
-    outcome               INTEGER NOT NULL CHECK (outcome BETWEEN 1 AND 6),
+    outcome               TEXT NOT NULL CHECK (outcome IN ('WIN','LOSS','BE','SKIP','REJECT','CANCEL')),
     future_proximity      TEXT NOT NULL CHECK (future_proximity IN ('IMMEDIATE','SHORT','LONG','EXTENDED')),
     action_type           TEXT NOT NULL,
     parameter_set_id      INTEGER,
@@ -570,14 +566,14 @@ CREATE TABLE original_combinations (
 
 -- Reentry combinations table (with conditional duration)
 CREATE TABLE reentry_combinations (
-    combination_id        TEXT PRIMARY KEY, -- R{N}::{SIGNAL}::{DURATION|NO_DURATION}::{OUTCOME}::{PROX}
+    combination_id        TEXT PRIMARY KEY, -- R{N}:SIGNAL[:DURATION]:PROX:OUTCOME
     generation            INTEGER NOT NULL CHECK (generation IN (1,2)),
     signal_type           TEXT NOT NULL CHECK (signal_type IN ('ECO_HIGH','ECO_MED','ANTICIPATION_1HR','ANTICIPATION_8HR','EQUITY_OPEN_ASIA','EQUITY_OPEN_EUROPE','EQUITY_OPEN_USA','ALL_INDICATORS')),
     duration_category     TEXT NOT NULL CHECK (
         (signal_type IN ('ECO_HIGH','ECO_MED') AND duration_category IN ('FLASH','QUICK','LONG','EXTENDED')) OR
         (signal_type NOT IN ('ECO_HIGH','ECO_MED') AND duration_category = 'NO_DURATION')
     ),
-    outcome               INTEGER NOT NULL CHECK (outcome BETWEEN 1 AND 6),
+    outcome               TEXT NOT NULL CHECK (outcome IN ('WIN','LOSS','BE','SKIP','REJECT','CANCEL')),
     future_proximity      TEXT NOT NULL CHECK (future_proximity IN ('IMMEDIATE','SHORT','LONG','EXTENDED')),
     action_type           TEXT NOT NULL,
     parameter_set_id      INTEGER,
@@ -629,23 +625,23 @@ CREATE INDEX idx_chains_status ON reentry_chains(chain_status, current_generatio
 ### 7.1 Colon-Delimited Format
 
 ```python
-def make_original_id(signal: str, outcome: int, proximity: str) -> str:
+def make_original_id(signal: str, outcome: str, proximity: str) -> str:
     """UPDATED v3.0: Original trade combination ID"""
-    return f"O::{signal}::{outcome}::{proximity}"
+    return f"O:{signal}:{proximity}:{outcome}"
 
-def make_reentry_id(generation: int, signal: str, duration: str, outcome: int, proximity: str) -> str:
+def make_reentry_id(generation: int, signal: str, duration: str, outcome: str, proximity: str) -> str:
     """UPDATED v3.0: Reentry combination ID with conditional duration"""
     if signal in DURATION_SIGNALS:
-        return f"R{generation}::{signal}::{duration}::{outcome}::{proximity}"
+        return f"R{generation}:{signal}:{duration}:{proximity}:{outcome}"
     else:
-        return f"R{generation}::{signal}::NO_DURATION::{outcome}::{proximity}"
+        return f"R{generation}:{signal}:{proximity}:{outcome}"
 
 # Examples:
-# "O::EQUITY_OPEN_USA::4::SHORT"
-# "O::ANTICIPATION_1HR::2::IMMEDIATE"
-# "R1::ECO_HIGH::QUICK::6::IMMEDIATE" 
-# "R2::ANTICIPATION_8HR::NO_DURATION::2::LONG"
-# "R1::ALL_INDICATORS::NO_DURATION::5::EXTENDED"
+# "O:EQUITY_OPEN_USA:SHORT:WIN"
+# "O:ANTICIPATION_1HR:IMMEDIATE:LOSS"
+# "R1:ECO_HIGH:QUICK:IMMEDIATE:BE"
+# "R2:ANTICIPATION_8HR:LONG:REJECT"
+# "R1:ALL_INDICATORS:EXTENDED:SKIP"
 ```
 
 ---
@@ -671,7 +667,7 @@ class MatrixVisualizationPanel:
         self.heatmap_figure.clear()
         ax = self.heatmap_figure.add_subplot(111)
         
-        outcomes = list(range(1, 7))
+        outcomes = ["WIN", "LOSS", "BE", "SKIP", "REJECT", "CANCEL"]
         
         # UPDATED v3.0: Conditional rendering based on signal type and generation
         if generation == "Original" or signal_type not in ["ECO_HIGH", "ECO_MED"]:
@@ -701,7 +697,7 @@ class MatrixVisualizationPanel:
             
             # Set labels
             ax.set_xticks(range(len(outcomes)))
-            ax.set_xticklabels([f'Outcome {o}' for o in outcomes])
+            ax.set_xticklabels(outcomes)
             ax.set_yticks([0])
             ax.set_yticklabels(['NO_DURATION'])
             
@@ -742,7 +738,7 @@ class MatrixVisualizationPanel:
             
             # Set labels
             ax.set_xticks(range(len(outcomes)))
-            ax.set_xticklabels([f'Outcome {o}' for o in outcomes])
+            ax.set_xticklabels(outcomes)
             ax.set_yticks(range(len(durations)))
             ax.set_yticklabels(durations)
         
@@ -845,14 +841,14 @@ class ReentryChainExecutor:
         # Build combination ID based on generation and signal type
         if gen == 0:
             # Original trade
-            combo_id = f"O::{sig}::{out}::{prox}"
+            combo_id = f"O:{sig}:{prox}:{out}"
         else:
             # Reentry trade
             if sig in self.DURATION_SIGNALS:
                 dur = self.categorize_duration(trade["duration_minutes"])
-                combo_id = f"R{gen}::{sig}::{dur}::{out}::{prox}"
+                combo_id = f"R{gen}:{sig}:{dur}:{prox}:{out}"
             else:
-                combo_id = f"R{gen}::{sig}::NO_DURATION::{out}::{prox}"
+                combo_id = f"R{gen}:{sig}:{prox}:{out}"
         
         # Lookup combination response
         response = self.lookup_combination_response(combo_id)
@@ -885,33 +881,28 @@ class ReentryChainExecutor:
 ```python
 def calculate_matrix_size():
     """UPDATED v3.0: Calculate total combinations in the reduced system"""
-    
-    S = 7  # signals (updated)
-    F = 4  # future proximity 
+
+    S = 8  # signals (updated)
+    F = 4  # future proximity
     O = 6  # outcomes
     K = 4  # durations (only for 2 signals)
-    
-    # Originals: S × F = 7 × 4 = 28
-    originals = S * F
-    
-    # Reentries: 2 generations × [(2 signals × 4 durations × 6 outcomes × 4 prox) + 
-    #                             (5 signals × 1 duration × 6 outcomes × 4 prox)]
-    # = 2 × [(2×4×6×4) + (5×1×6×4)]
-    # = 2 × [192 + 120] = 624
-    reentries = 2 * ((2 * 4 * O * F) + (5 * 1 * O * F))
-    
-    total_per_symbol = originals + reentries  # 28 + 624 = 652
-    total_for_20_pairs = total_per_symbol * 20  # 13,040
-    
+
+    duration_signals = 2  # ECO_HIGH, ECO_MED
+    non_duration_signals = S - duration_signals
+    per_generation = (duration_signals * K * O * F) + (non_duration_signals * O * F)  # 336
+    generations = 3  # O, R1, R2
+    total_per_symbol = per_generation * generations  # 1008
+    total_for_20_pairs = total_per_symbol * 20  # 20,160
+
     return {
-        "originals": originals,
-        "reentries": reentries, 
+        "per_generation": per_generation,
+        "generations": generations,
         "total_per_symbol": total_per_symbol,
         "total_for_20_pairs": total_for_20_pairs,
         "architecture": "reduced_v3.0"
     }
 
-# UPDATED v3.0: Result: 652 combinations per symbol, 13,040 total for 20 currency pairs
+# UPDATED v3.0: Result: 1008 combinations per symbol, 20,160 total for 20 currency pairs
 ```
 
 ---
@@ -953,7 +944,7 @@ def validate_reduced_system_v3():
     """UPDATED v3.0: Comprehensive validation of reduced system"""
     
     # Test combination count accuracy
-    assert calculate_total_combinations() == 652
+    assert calculate_matrix_size()["total_per_symbol"] == 1008
     
     # Test signal enumeration
     expected_signals = {
@@ -989,7 +980,7 @@ def validate_reduced_system_v3():
 
 **UPDATED v3.0** achieves enhanced specificity while maintaining complexity reduction:
 
-- **652 combinations per symbol** (deterministic, optimized from 704)
+- **1008 combinations per symbol** (deterministic)
 - **Regional equity specificity** with separate logic for Asia/Europe/USA opens
 - **Temporal anticipation granularity** with 1HR vs 8HR positioning strategies
 - **Conditional duration logic** applies granular timing analysis only where most valuable (ECO events)
@@ -1002,7 +993,7 @@ def validate_reduced_system_v3():
 
 - **Storage efficiency**: 92% reduction in combination count vs. original baseline
 - **Lookup performance**: O(1) direct matrix access with conditional branching
-- **Memory footprint**: Linear scaling with 652 × symbol_count
+- **Memory footprint**: Linear scaling with 1008 × symbol_count
 - **Processing speed**: Bounded decision trees with maximum 2 reentry generations
 - **Regional intelligence**: Separate logic paths for different trading sessions
 
@@ -1010,7 +1001,7 @@ def validate_reduced_system_v3():
 
 - **Enhanced signal specificity** with clear regional and temporal distinctions
 - **Simplified rule sets** with clear duration gating
-- **Reduced test surface area** (652 vs. thousands of combinations)
+- **Reduced test surface area** (1008 vs. thousands of combinations)
 - **Clear separation** between original and reentry logic
 - **Bounded complexity** prevents exponential growth
 - **Standardized interfaces** for all matrix operations
