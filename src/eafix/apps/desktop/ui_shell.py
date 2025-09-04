@@ -1,8 +1,45 @@
 try:
-    from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QDockWidget, QWidget, QVBoxLayout
+    from PySide6.QtWidgets import (
+        QApplication,
+        QMainWindow,
+        QLabel,
+        QDockWidget,
+        QWidget,
+        QVBoxLayout,
+        QTabWidget,
+    )
 except Exception:
     QApplication = None
     QMainWindow = object
+
+STRENGTH_INDICATORS = ["RSI", "Stochastic", "Z-Score"]
+
+
+def _build_workspace_tab() -> QWidget:
+    """Create the default workspace tab."""
+    tab = QWidget()
+    layout = QVBoxLayout(tab)
+    layout.addWidget(QLabel("Central workspace — YAML editor would live here."))
+    return tab
+
+
+def _build_strength_tab() -> QWidget:
+    """Create a tab displaying currency strength indicators."""
+    tab = QWidget()
+    layout = QVBoxLayout(tab)
+    layout.addWidget(QLabel("Currency strength indicators"))
+    for name in STRENGTH_INDICATORS:
+        layout.addWidget(QLabel(name))
+    return tab
+
+
+def create_central_widget() -> QTabWidget:
+    """Construct the central tab widget for the main window."""
+    tabs = QTabWidget()
+    tabs.addTab(_build_workspace_tab(), "Workspace")
+    tabs.addTab(_build_strength_tab(), "Strength")
+    return tabs
+
 
 def launch_ui():
     if QApplication is None:
@@ -12,11 +49,8 @@ def launch_ui():
     win = QMainWindow()
     win.setWindowTitle("APF Desktop (stub)")
 
-    # Central widget
-    central = QWidget()
-    layout = QVBoxLayout(central)
-    layout.addWidget(QLabel("Central workspace — YAML editor would live here."))
-    win.setCentralWidget(central)
+    # Central widget with tabs
+    win.setCentralWidget(create_central_widget())
 
     # Problems dock
     dock = QDockWidget("Problems")
