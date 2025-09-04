@@ -17,10 +17,15 @@ processing, and a unified desktop interface for MetaTrader 4 integration.
 - `src/` – Application source code (`eafix` package and submodules)
 - `tests/` – Unit tests and integration tests
 - `tools/` – Trading analysis and validation tools
-- `docs/` – Documentation, reference material, and guides
 - `core/` – Core trading system components
 - `tabs/` – GUI tab interfaces
-- `settings.json` – Configuration settings
+- `organized/` – Cleaned repository contents
+  - `main_applications/` – Entry point scripts
+  - `configuration/` – JSON/YAML configuration files
+  - `documentation/` – Project documentation and guides
+  - `mql4_integration/` – MetaTrader 4 bridges and artifacts
+  - `utilities/` – Helper scripts and modules
+  - `archived/` – Legacy files and backups
 
 ## Quick Start
 
@@ -31,19 +36,19 @@ pytest -q
 
 Launch the trading system:
 ```bash
-python launch_trading_system.py
+python organized/main_applications/launch_trading_system.py
 ```
 
 ## Launching the Desktop GUI with MetaTrader 4
 
-The desktop application automatically launches MetaTrader 4 if the `terminal.exe` 
-executable can be located. The launcher checks the `MT4_PATH` environment variable 
+The desktop application automatically launches MetaTrader 4 if the `terminal.exe`
+executable can be located. The launcher checks the `MT4_PATH` environment variable
 first and falls back to common installation paths on Windows.
 
-Helper scripts for desktop shortcuts:
+Helper scripts for desktop shortcuts (located in `organized/main_applications/`):
 
 - `launch_gui.bat` – Windows batch file
 - `launch_gui.sh` – POSIX shell script
 
-Both scripts execute `python -m eafix.apps.desktop.main` which starts MetaTrader 4 
+Both scripts execute `python -m eafix.apps.desktop.main` which starts MetaTrader 4
 (if available) and then the Python GUI.
