@@ -25,6 +25,11 @@ class IndicatorEngine:
         self.ui_refresh_ms = ui_refresh_ms
         self._registry: Dict[str, List[object]] = {}
         self._last_perf_check = time.time()
+        # Track how many updates have occurred between performance checks and
+        # store a small history of update rates (updates/second).  These values
+        # are primarily useful for unit tests and lightweight diagnostics.
+        self._updates_since_check = 0
+        self.perf_history: List[float] = []
 
     def add_indicator(self, symbol: str, indicator: object) -> None:
         lst = self._registry.setdefault(symbol, [])
@@ -40,16 +45,24 @@ class IndicatorEngine:
             except Exception:
                 out = None
             outputs[ind.__class__.__name__] = out if out is not None else float("nan")
+        self._updates_since_check += 1
         self._maybe_perf_check()
         return outputs
 
     # ------------------------------------------------------------------
     def _maybe_perf_check(self) -> None:
         now = time.time()
-        if (now - self._last_perf_check) * 1000 >= self.ui_refresh_ms:
+        elapsed = now - self._last_perf_check
+        if elapsed * 1000 >= self.ui_refresh_ms:
+            # Compute updates per second since the last check.  This is a very
+            # lightweight metric but provides a useful signal for tests or
+            # diagnostic tools.
+            if elapsed > 0:
+                rate = self._updates_since_check / elapsed
+                self.perf_history.append(rate)
+
+            self._updates_since_check = 0
             self._last_perf_check = now
-            # Placeholder for future performance metrics
-            pass
 
 
 # Factory convenience ----------------------------------------------------------
