@@ -7,6 +7,13 @@ import threading
 from unittest.mock import Mock, patch, MagicMock
 import sys
 import os
+import pytest
+
+# These tests exercise Windows-specific DDE integration.
+if sys.platform != "win32":
+    pytest.skip("MT4 DDE interface tests require Windows", allow_module_level=True)
+
+pytest.importorskip("win32ui")
 
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))

@@ -1,1 +1,2 @@
-# Technical Indicators Package
+"""Technical indicators package."""
+

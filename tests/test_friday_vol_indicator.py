@@ -1,6 +1,12 @@
 # tests/test_friday_vol_indicator.py
+import pathlib
+import sys
 import pytest
 from datetime import datetime
+
+# Allow running tests without installing the package
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+
 from indicators.friday_vol_indicator import FridayVolIndicator, FridayVolIndicatorConfig, UTC
 
 # Freeze to a known Friday after 14:00 Chicago: 2025-08-29 20:10:00 UTC
@@ -167,7 +173,3 @@ def test_multiple_symbols_independent():
     # EURUSD is still triggered, USDJPY still not
     state_eur2 = indicator.get_indicator_state("EURUSD", get_price_at=get_price_eur, now_utc=FRI_UTC_AFTER)
     assert state_eur2["status"] == "TRIGGERED_PREVIOUSLY"
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

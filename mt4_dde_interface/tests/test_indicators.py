@@ -2,10 +2,13 @@
 Test suite for Technical Indicators
 """
 import unittest
-import numpy as np
 import sys
 import os
 from datetime import datetime
+import pytest
+
+# The indicator implementations rely on numpy for calculations.
+np = pytest.importorskip("numpy")
 
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
