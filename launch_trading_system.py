@@ -76,6 +76,10 @@ def load_default_config():
             'host': 'localhost',
             'port': 9090,
             'timeout': 5
+        },
+        'auth': {
+            'username': 'admin',
+            'password': 'password'
         }
     }
     
@@ -96,6 +100,9 @@ class TradingSystemLauncher:
     
     def __init__(self):
         self.logger = setup_logging()
+        self.log_file = (
+            self.logger.handlers[0].baseFilename if self.logger.handlers else None
+        )
         self.root = None
         self.config = load_default_config()
         self.notebook = None
@@ -110,28 +117,91 @@ class TradingSystemLauncher:
         self.root.title(self.config['app']['title'])
         self.root.geometry(self.config['app']['geometry'])
         self.root.configure(bg='#f0f0f0')
-        
+
+        # Dependency check with error messaging
+        missing = check_dependencies()
+        if missing:
+            messagebox.showerror(
+                "Missing Dependencies",
+                f"Required modules not found: {', '.join(missing)}",
+            )
+            self.root.destroy()
+            return
+
+        # Show login dialog; exit if authentication fails
+        if not self._show_login_dialog():
+            self.root.destroy()
+            return
+
         # Create main menu bar
         self._create_menu_bar()
-        
+
         # Create main frame
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
+
         # Create notebook for tabs (Excel-like workbook)
         self.notebook = ttk.Notebook(main_frame)
         self.notebook.pack(fill=tk.BOTH, expand=True)
-        
+
         # Create all tabs
         self._create_all_tabs()
-        
+
         # Create status bar at bottom
         self._create_status_bar(main_frame)
-        
+
         # Start with dashboard tab selected
         self.notebook.select(0)
-        
+
         self.root.mainloop()
+
+    def _show_login_dialog(self):
+        """Display a simple login dialog."""
+        auth = self.config.get('auth', {})
+        username_var = tk.StringVar()
+        password_var = tk.StringVar()
+        error_var = tk.StringVar()
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Login")
+        dialog.geometry("300x150")
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        tk.Label(dialog, text="Username:").grid(row=0, column=0, padx=10, pady=5, sticky="e")
+        tk.Entry(dialog, textvariable=username_var).grid(row=0, column=1, padx=10, pady=5)
+        tk.Label(dialog, text="Password:").grid(row=1, column=0, padx=10, pady=5, sticky="e")
+        tk.Entry(dialog, textvariable=password_var, show="*").grid(row=1, column=1, padx=10, pady=5)
+        tk.Label(dialog, textvariable=error_var, foreground="red").grid(
+            row=2, column=0, columnspan=2
+        )
+
+        result = {"success": False}
+
+        def attempt_login():
+            username = username_var.get().strip()
+            password = password_var.get().strip()
+            if not username or not password:
+                error_var.set("Please enter username and password")
+                return
+            if (
+                username == auth.get('username')
+                and password == auth.get('password')
+            ):
+                result["success"] = True
+                dialog.destroy()
+            else:
+                error_var.set("Invalid username or password")
+                self.logger.warning(
+                    "Failed login attempt for user %s", username
+                )
+
+        tk.Button(dialog, text="Login", command=attempt_login).grid(
+            row=3, column=0, columnspan=2, pady=10
+        )
+
+        self.root.wait_window(dialog)
+        return result["success"]
     
     def _create_menu_bar(self):
         """Create main menu bar"""
@@ -195,17 +265,22 @@ class TradingSystemLauncher:
         self.notebook.add(status_frame, text="⚡ System Status")
         self._create_system_status_tab(status_frame)
 
-        # Tab 7: Tools & Validation
+        # Tab 7: Issue Log
+        issues_frame = ttk.Frame(self.notebook)
+        self.notebook.add(issues_frame, text="❗ Issues")
+        self._create_issues_tab(issues_frame)
+
+        # Tab 8: Tools & Validation
         tools_frame = ttk.Frame(self.notebook)
         self.notebook.add(tools_frame, text="🛠️ Tools")
         self._create_tools_tab(tools_frame)
 
-        # Tab 8: Economic Calendar
+        # Tab 9: Economic Calendar
         calendar_frame = ttk.Frame(self.notebook)
         self.notebook.add(calendar_frame, text="📅 Calendar")
         self._create_calendar_tab(calendar_frame)
 
-        # Tab 9: Settings & Config
+        # Tab 10: Settings & Config
         config_frame = ttk.Frame(self.notebook)
         self.notebook.add(config_frame, text="⚙️ Settings")
         self._create_config_tab(config_frame)
@@ -238,6 +313,35 @@ class TradingSystemLauncher:
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.time_label.config(text=current_time)
         self.root.after(1000, self._update_time)
+
+    def _create_issues_tab(self, parent):
+        """Create tab that displays recent log entries."""
+        ttk.Label(
+            parent, text="Recent Log Entries", font=("Arial", 12, "bold")
+        ).pack(anchor="w", padx=10, pady=(10, 0))
+        text_widget = tk.Text(parent, height=20)
+        text_widget.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        ttk.Button(
+            parent,
+            text="Refresh",
+            command=lambda: self._refresh_log_text(text_widget),
+        ).pack(pady=(0, 10))
+        self._refresh_log_text(text_widget)
+
+    def _refresh_log_text(self, widget):
+        """Load log file content into widget."""
+        widget.config(state=tk.NORMAL)
+        widget.delete("1.0", tk.END)
+        if self.log_file and os.path.exists(self.log_file):
+            try:
+                with open(self.log_file, "r") as f:
+                    lines = f.readlines()[-200:]
+                widget.insert(tk.END, "".join(lines))
+            except Exception as e:
+                widget.insert(tk.END, f"Could not read log file: {e}\n")
+        else:
+            widget.insert(tk.END, "Log file not available\n")
+        widget.config(state=tk.DISABLED)
     
     def launch_main_interface(self):
         """Launch the main trading interface"""
