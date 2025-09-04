@@ -125,7 +125,7 @@ class LiveMetrics:
                 elif key in ['last_trade_time', 'last_update'] and isinstance(value, str):
                     try:
                         setattr(self, key, datetime.fromisoformat(value))
-                    except:
+                    except (ValueError, TypeError):
                         pass
                 else:
                     setattr(self, key, value)

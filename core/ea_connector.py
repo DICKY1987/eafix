@@ -89,7 +89,7 @@ class EAConnector:
         if self.socket:
             try:
                 self.socket.close()
-            except:
+            except OSError:
                 pass
             self.socket = None
         
