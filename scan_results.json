@@ -1,0 +1,7 @@
+{
+  "frameworks": [
+    "MQL4",
+    "Database-Integration",
+    "Python-Trading"
+  ]
+}

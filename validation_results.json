@@ -1,0 +1,17 @@
+{
+  "mql4_compilation": "fail",
+  "python_services": "pass",
+  "bridge_connectivity": "pass",
+  "database_integrity": "pass",
+  "risk_parameters": "pass",
+  "security_scan": "fail",
+  "performance_benchmarks": "fail",
+  "fixes_applied": 105,
+  "trading_issues_resolved": 0,
+  "new_issues": 7,
+  "gates": {
+    "A": false,
+    "B": true,
+    "C": false
+  }
+}

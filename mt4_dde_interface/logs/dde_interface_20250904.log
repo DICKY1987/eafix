@@ -1,0 +1,18 @@
+2025-09-04 08:24:12,776 - __main__ - INFO - Starting MT4 DDE Price Import Interface
+2025-09-04 08:24:27,463 - __main__ - ERROR - Critical error starting application: attempted relative import with no known parent package
+2025-09-04 08:24:27,463 - __main__ - ERROR - Traceback (most recent call last):
+  File "C:\Users\Richard Wilks\eafix\mt4_dde_interface\run_application.py", line 95, in main
+    from main_tab import DDEPriceImportApp
+  File "C:\Users\Richard Wilks\eafix\mt4_dde_interface\src\main_tab.py", line 13, in <module>
+    from .dde_client import MT4DDEClient, DDEConnectionManager
+ImportError: attempted relative import with no known parent package
+
+2025-09-04 08:24:43,554 - __main__ - INFO - Starting MT4 DDE Price Import Interface
+2025-09-04 08:24:44,775 - __main__ - ERROR - Critical error starting application: attempted relative import with no known parent package
+2025-09-04 08:24:44,775 - __main__ - ERROR - Traceback (most recent call last):
+  File "C:\Users\Richard Wilks\eafix\mt4_dde_interface\run_application.py", line 95, in main
+    from main_tab import DDEPriceImportApp
+  File "C:\Users\Richard Wilks\eafix\mt4_dde_interface\src\main_tab.py", line 13, in <module>
+    from .dde_client import MT4DDEClient, DDEConnectionManager
+ImportError: attempted relative import with no known parent package
+
