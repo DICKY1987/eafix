@@ -1,0 +1,5 @@
+{
+  "class": "eafix.indicators.strength_stoch.StrengthStochasticIndicator",
+  "args": {"k_period": 14, "d_period": 3},
+  "category": "strength"
+}

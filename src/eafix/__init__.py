@@ -7,6 +7,7 @@ the package.
 
 from . import conditional_signals, currency_strength, indicator_engine, signals
 from . import strength_feed, transport_integrations
+from .indicator_loader import load_indicators_from_dir
 
 __all__ = [
     "conditional_signals",
@@ -15,6 +16,7 @@ __all__ = [
     "signals",
     "strength_feed",
     "transport_integrations",
+    "load_indicators_from_dir",
 ]
 
 # Basic package metadata; the version is intentionally static for the scaffold

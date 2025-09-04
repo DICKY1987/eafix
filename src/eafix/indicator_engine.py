@@ -7,15 +7,11 @@ indicators.  Indicators are simple objects exposing an ``update`` method.
 
 from __future__ import annotations
 
-from typing import Callable, Dict, List
+from typing import Dict, List
+from pathlib import Path
 import time
 
-from .indicators import (
-    StrengthRSIIndicator,
-    StrengthStochasticIndicator,
-    StrengthZScoreIndicator,
-    StrengthMACDIndicator,
-)
+from .indicator_loader import load_indicators_from_dir
 
 MAX_INDICATORS_PER_SYMBOL = 50
 
@@ -55,10 +51,6 @@ class IndicatorEngine:
 # Factory convenience ----------------------------------------------------------
 
 def default_strength_indicators() -> List[object]:
-    return [
-        StrengthRSIIndicator(),
-        StrengthStochasticIndicator(),
-        StrengthZScoreIndicator(),
-        StrengthMACDIndicator(),
-    ]
+    cfg_dir = Path(__file__).resolve().parent / "indicator_configs"
+    return load_indicators_from_dir(cfg_dir, category="strength")
 

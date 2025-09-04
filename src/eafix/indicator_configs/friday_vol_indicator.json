@@ -1,0 +1,10 @@
+{
+  "class": "eafix.indicators.friday_vol_indicator.FridayVolIndicator",
+  "config_class": "eafix.indicators.friday_vol_indicator.FridayVolIndicatorConfig",
+  "config": {
+    "percent_threshold": 1.0,
+    "start_local_hhmm": "07:30",
+    "end_local_hhmm": "14:00"
+  },
+  "category": "friday_vol"
+}

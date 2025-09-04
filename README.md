@@ -10,3 +10,5 @@ Generated from BU_* briefs: diagnostics schema, tests, CI, and app stubs.
 - `settings.json` – example configuration
 - Includes scaffolding for conditional probability signals, currency strength
   analytics, and transport failover examples used in tests
+- `src/eafix/indicator_configs` – JSON indicator definitions that are loaded at
+  runtime for plug‑and‑play extensibility

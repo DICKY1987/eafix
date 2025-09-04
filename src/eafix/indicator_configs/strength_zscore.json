@@ -1,0 +1,5 @@
+{
+  "class": "eafix.indicators.strength_zscore.StrengthZScoreIndicator",
+  "args": {"period": 20},
+  "category": "strength"
+}

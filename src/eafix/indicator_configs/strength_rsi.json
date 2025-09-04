@@ -1,0 +1,5 @@
+{
+  "class": "eafix.indicators.strength_rsi.StrengthRSIIndicator",
+  "args": {"period": 14},
+  "category": "strength"
+}
