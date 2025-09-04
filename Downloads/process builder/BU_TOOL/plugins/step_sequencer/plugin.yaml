@@ -1,0 +1,24 @@
+id: step_sequencer
+name: "Step Sequencer"
+version: "0.1.0"
+entrypoint: "plugins.step_sequencer.plugin:run"
+capabilities:
+  - command: insert
+    inputs:
+      input_file: {type: path, required: true}
+      after: {type: string, required: true}
+      actor: {type: string, default: "user"}
+      action: {type: string, default: "transform"}
+      text: {type: string, default: "New step"}
+      backup: {type: bool, default: true}
+  - command: renumber
+    inputs:
+      input_file: {type: path, required: true}
+      start: {type: string, default: "1.001"}
+      increment: {type: string, default: "0.001"}
+      backup: {type: bool, default: true}
+policies:
+  io:
+    read: ["*.yaml", "*.yml"]
+    write: ["*.yaml", "*.yml"]
+  network: false

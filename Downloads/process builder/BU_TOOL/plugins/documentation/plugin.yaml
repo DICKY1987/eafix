@@ -1,0 +1,17 @@
+id: documentation
+name: "Documentation Bundler"
+version: "0.1.0"
+entrypoint: "plugins.documentation.plugin:run"
+capabilities:
+  - command: bundle
+    inputs:
+      input_file: {type: path, required: true}
+      output_dir: {type: path, default: "derived"}
+      formats: {type: list[str], default: ["md", "drawio", "json"]}
+    outputs:
+      bundle: {type: path}
+policies:
+  io:
+    read: ["*.yaml", "*.yml"]
+    write: ["*.zip", "*.md", "*.json", "*.drawio"]
+  network: false

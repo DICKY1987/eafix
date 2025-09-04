@@ -1,0 +1,27 @@
+meta:
+  title: Demo Process
+steps:
+  - id: "1.001"
+    actor: user
+    action: import
+    text: "Load source file"
+    next: ["1.002"]
+  - id: "1.002"
+    actor: sequencer
+    action: sequence
+    text: "Compute step order"
+    next: ["1.003", "1.010"]
+  - id: "1.003"
+    actor: validator
+    action: validate
+    text: "Run schema and semantic checks"
+    next: ["1.004"]
+  - id: "1.004"
+    actor: exporter
+    action: render
+    text: "Produce Markdown and Draw.io"
+  - id: "1.010"
+    actor: diagrammer
+    action: render
+    text: "Render diagram"
+    next: ["1.004"]

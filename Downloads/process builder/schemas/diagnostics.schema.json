@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.apf.local/diagnostics.schema.json",
+  "title": "APF Diagnostics",
+  "description": "Structured diagnostics from APF tools (validation, import, export).",
+  "type": "array",
+  "items": { "$ref": "#/$defs/Diagnostic" },
+  "$defs": {
+    "Severity": {
+      "type": "string",
+      "description": "Severity of the diagnostic.",
+      "enum": ["ERROR", "WARN", "INFO"]
+    },
+    "Location": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "file": { "type": "string", "description": "Source file path related to the diagnostic." },
+        "step_id": {
+          "type": "string",
+          "description": "Optional APF StepKey impacted by this diagnostic.",
+          "pattern": "^\\d+(\\.\\d{3,})?$"
+        },
+        "json_pointer": { "type": "string", "description": "JSON Pointer into the source document, if applicable." },
+        "line": { "type": "integer", "minimum": 1 },
+        "column": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "Diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["severity", "code", "message"],
+      "properties": {
+        "severity": { "$ref": "#/$defs/Severity" },
+        "code": {
+          "type": "string",
+          "description": "Stable diagnostic code.",
+          "pattern": "^APF[0-9]{4}$"
+        },
+        "message": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "location": { "$ref": "#/$defs/Location" },
+        "related": {
+          "type": "array",
+          "description": "Related StepKeys or file references.",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "hint": { "type": "string", "description": "Optional remediation guidance." },
+        "run_id": { "type": "string", "description": "Correlates diagnostics across artifacts." },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "data": { "type": "object", "description": "Free-form structured context for tooling.", "additionalProperties": true }
+      }
+    }
+  },
+  "examples": [
+    [
+      {
+        "severity": "ERROR",
+        "code": "APF0001",
+        "message": "Unknown actor 'analyst' (did you mean 'user'?)",
+        "location": { "file": "specs/demo_atomic.yaml", "line": 12, "column": 7 },
+        "hint": "Add alias in registries/actors.yaml or change the author field.",
+        "run_id": "2025-08-22T01:23:45Z#abc123"
+      },
+      {
+        "severity": "WARN",
+        "code": "APF0400",
+        "message": "Importer ambiguity: sentence maps to multiple actions.",
+        "location": { "file": "notes/process.md", "json_pointer": "/sections/2/paragraphs/3" },
+        "data": { "candidates": ["normalize", "transform"] }
+      }
+    ]
+  ]
+}
