@@ -2,7 +2,8 @@
 from __future__ import annotations
 import csv
 from typing import Iterable
-from calendar_processing import Event
+
+from .calendar_processing import Event
 
 
 def write_signals(events: Iterable[Event], path: str) -> None:

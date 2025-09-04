@@ -1,8 +1,6 @@
 from pathlib import Path
-import sys
-sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from calendar_processing import (
+from organized.utilities.calendar_processing import (
     read_csv_calendar,
     filter_events,
     generate_all_anticipation_events,
