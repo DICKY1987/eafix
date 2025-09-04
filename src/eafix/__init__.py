@@ -5,8 +5,14 @@ simply import them from :mod:`eafix` without knowing the internal layout of
 the package.
 """
 
-from . import conditional_signals, currency_strength, indicator_engine, signals
+from . import (
+    conditional_signals,
+    currency_strength,
+    indicator_engine,
+    signals,
+)
 from . import strength_feed, transport_integrations
+from .forex_factory_calendar import fetch_calendar
 
 __all__ = [
     "conditional_signals",
@@ -15,6 +21,7 @@ __all__ = [
     "signals",
     "strength_feed",
     "transport_integrations",
+    "fetch_calendar",
 ]
 
 # Basic package metadata; the version is intentionally static for the scaffold
