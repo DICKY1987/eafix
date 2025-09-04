@@ -1,0 +1,4 @@
+# Initial seed constraints (placeholder)
+- id: 1
+  name: max_drawdown
+  expression: "equity_drawdown < 0.2"

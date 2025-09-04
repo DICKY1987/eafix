@@ -1,0 +1,31 @@
+{
+  "signals": {
+    "FridayMove": {
+      "enabled": true,
+      "percent_threshold": 1.0,
+      "start_local": "07:30",
+      "end_local": "14:00",
+      "risk_profile": "FRIDAY_VOL_EDGE_V1"
+    }
+  },
+  "pct_windows_min": [15, 60, 240, 480, 720, 1440],
+  "trigger_grid": {
+    "burst_pips": [10, 15],
+    "burst_window_min": [10, 15],
+    "fwd_pips": [15, 25],
+    "fwd_window_min": [60, 180]
+  },
+  "dde": {
+    "poll_ms": 100,
+    "timeout_sec": 30,
+    "reconnect_sec": 5
+  },
+  "ui": {
+    "refresh_ms": 500
+  },
+  "limits": {
+    "max_symbols": 50,
+    "max_indicators_per_symbol": 50,
+    "retries": 10
+  }
+}

@@ -1,9 +1,12 @@
 from pathlib import Path
 import json
+import pytest
+
+jsonschema = pytest.importorskip("jsonschema")
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[2]
-SCHEMA = ROOT / "schemas" / "diagnostics.schema.json"
+SCHEMA = ROOT / "src" / "eafix" / "schemas" / "diagnostics.schema.json"
 
 VALID_EXAMPLES = [
     {
