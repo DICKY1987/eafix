@@ -15,6 +15,7 @@ import json
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'core'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'tabs'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'mt4_dde_interface', 'src'))
+from currency_strength_dashboard import CurrencyStrengthDashboardTab
 
 def setup_logging():
     """Setup application logging"""
@@ -178,28 +179,33 @@ class TradingSystemLauncher:
         dde_frame = ttk.Frame(self.notebook)
         self.notebook.add(dde_frame, text="📊 Price Feed")
         self._create_dde_price_tab(dde_frame)
-        
-        # Tab 4: Trade History
+
+        # Tab 4: Currency Strength Dashboard
+        strength_frame = ttk.Frame(self.notebook)
+        self.notebook.add(strength_frame, text="💪 Strength")
+        self._create_currency_strength_tab(strength_frame)
+
+        # Tab 5: Trade History
         history_frame = ttk.Frame(self.notebook)
         self.notebook.add(history_frame, text="📋 Trade History")
         self._create_trade_history_tab(history_frame)
-        
-        # Tab 5: System Status
+
+        # Tab 6: System Status
         status_frame = ttk.Frame(self.notebook)
         self.notebook.add(status_frame, text="⚡ System Status")
         self._create_system_status_tab(status_frame)
-        
-        # Tab 6: Tools & Validation
+
+        # Tab 7: Tools & Validation
         tools_frame = ttk.Frame(self.notebook)
         self.notebook.add(tools_frame, text="🛠️ Tools")
         self._create_tools_tab(tools_frame)
-        
-        # Tab 7: Economic Calendar
+
+        # Tab 8: Economic Calendar
         calendar_frame = ttk.Frame(self.notebook)
         self.notebook.add(calendar_frame, text="📅 Calendar")
         self._create_calendar_tab(calendar_frame)
-        
-        # Tab 8: Settings & Config
+
+        # Tab 9: Settings & Config
         config_frame = ttk.Frame(self.notebook)
         self.notebook.add(config_frame, text="⚙️ Settings")
         self._create_config_tab(config_frame)
@@ -502,7 +508,11 @@ Available when connected to MT4:
 Note: Requires pywin32 package for DDE functionality"""
 
         self.price_text.insert(tk.END, initial_prices)
-    
+
+    def _create_currency_strength_tab(self, parent):
+        """Create currency strength dashboard tab"""
+        CurrencyStrengthDashboardTab(parent)
+
     def _create_trade_history_tab(self, parent):
         """Create trade history tab"""
         main_frame = ttk.Frame(parent)
