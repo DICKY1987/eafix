@@ -37,7 +37,9 @@ class FridayVolSignal:
         self._last_triggered: Dict[str, datetime.date] = {}
 
     def _current_chicago(self, now_utc: Optional[datetime] = None) -> datetime:
-        now_utc = now_utc or datetime.utcnow().replace(tzinfo=UTC)
+        now_utc = now_utc or datetime.utcnow()
+        if now_utc.tzinfo is None:
+            now_utc = now_utc.replace(tzinfo=UTC)
         return now_utc.astimezone(CHI)
 
     def _window_bounds_utc(self, ref_utc: Optional[datetime] = None):

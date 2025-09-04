@@ -69,3 +69,13 @@ def test_friday_vol_signal_triggers():
     now_utc = datetime(2023, 9, 1, 20, 0, tzinfo=UTC)
     result = signal.evaluate("EURUSD", get_price_at, now_utc)
     assert result and result["type"] == "EXECUTE"
+
+
+def test_naive_datetime_supported():
+    """Evaluate should accept naive UTC datetimes without error."""
+    cfg = FridayVolSignalConfig(percent_threshold=1.0)
+    sig = FridayVolSignal(cfg)
+    get_price = mock_prices_factory(1.0, 1.02)
+    now_naive = datetime(2025, 8, 29, 20, 10, 0)  # same moment as FRI_UTC but naive
+    msg = sig.evaluate("EURUSD", get_price_at=get_price, now_utc=now_naive)
+    assert msg and msg["type"] == "EXECUTE"
