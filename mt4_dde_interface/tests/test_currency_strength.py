@@ -3,6 +3,13 @@
 import unittest
 import sys
 import os
+import pytest
+
+# These tests rely on optional Windows-only and scientific stack dependencies.
+if sys.platform != "win32":
+    pytest.skip("MT4 DDE interface tests require Windows", allow_module_level=True)
+
+pytest.importorskip("numpy")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'indicators'))

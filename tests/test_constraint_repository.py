@@ -1,3 +1,9 @@
+import pathlib
+import sys
+
+# Allow running tests without installing the package
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+
 from core.constraint_repository import TradingConstraintRepository, TradingConstraint
 
 

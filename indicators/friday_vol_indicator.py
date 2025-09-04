@@ -2,10 +2,10 @@
 from dataclasses import dataclass
 from datetime import datetime, time
 from typing import Optional, Dict, Callable
-import pytz
+from zoneinfo import ZoneInfo
 
-CHI = pytz.timezone("America/Chicago")
-UTC = pytz.UTC
+CHI = ZoneInfo("America/Chicago")
+UTC = ZoneInfo("UTC")
 
 @dataclass
 class FridayVolIndicatorConfig:
@@ -36,14 +36,14 @@ class FridayVolIndicator:
         self._last_values: Dict[str, Dict] = {}
 
     def _current_chicago(self, now_utc: Optional[datetime] = None) -> datetime:
-        now_utc = now_utc or datetime.utcnow().replace(tzinfo=UTC)
+        now_utc = now_utc or datetime.now(UTC)
         return now_utc.astimezone(CHI)
 
     def _window_bounds_utc(self, ref_utc: Optional[datetime] = None):
         now_chi = self._current_chicago(ref_utc)
         # Ensure we compute for "today" in Chicago
-        start_chi = CHI.localize(datetime.combine(now_chi.date(), self.cfg.start_local))
-        end_chi   = CHI.localize(datetime.combine(now_chi.date(), self.cfg.end_local))
+        start_chi = datetime.combine(now_chi.date(), self.cfg.start_local, tzinfo=CHI)
+        end_chi   = datetime.combine(now_chi.date(), self.cfg.end_local, tzinfo=CHI)
         return start_chi.astimezone(UTC), end_chi.astimezone(UTC), now_chi
 
     def _is_friday(self, chi_dt: datetime) -> bool:
@@ -78,7 +78,7 @@ class FridayVolIndicator:
         state = {
             "indicator": "FridayVolIndicator",
             "symbol": symbol,
-            "timestamp_utc": (now_utc or datetime.utcnow().replace(tzinfo=UTC)).isoformat(),
+            "timestamp_utc": (now_utc or datetime.now(UTC)).isoformat(),
             "status": "WAITING",  # WAITING, MONITORING, TRIGGERED, EXPIRED
             "signal_active": False,
             "values": {},
@@ -97,45 +97,53 @@ class FridayVolIndicator:
             state["meta"]["reason"] = "Not Friday"
             return state
 
-        end_local_dt = CHI.localize(datetime.combine(now_chi.date(), self.cfg.end_local))
+        end_local_dt = datetime.combine(now_chi.date(), self.cfg.end_local, tzinfo=CHI)
         
         # Before window end - monitoring
         if now_chi < end_local_dt:
             state["status"] = "MONITORING"
             state["meta"]["reason"] = "Window active, monitoring for threshold breach"
-            
+
             # Try to get current values for monitoring
             try:
                 p_start = get_price_at(start_utc)
-                p_current = get_price_at(now_utc or datetime.utcnow().replace(tzinfo=UTC))
-                
+                p_current = get_price_at(now_utc or datetime.now(UTC))
+
                 if p_start and p_current and p_start > 0:
                     current_pct = abs((p_current - p_start) / p_start) * 100.0
                     direction = "UP" if p_current > p_start else "DOWN"
-                    
+
                     state["values"] = {
                         "p_start": p_start,
                         "p_current": p_current,
                         "current_pct_change": round(current_pct, 3),
+                        "pct_change": round(current_pct, 3),
                         "direction": direction,
                         "threshold_met": current_pct >= self.cfg.percent_threshold
                     }
-                    
+
                     # Signal if threshold already breached during monitoring
                     if current_pct >= self.cfg.percent_threshold:
                         state["signal_active"] = True
-                        state["status"] = "TRIGGERED"
-                        
+
             except Exception as e:
                 state["meta"]["price_error"] = str(e)
-                
+
             return state
 
         # After window end - check for final signal
+        if self._last_triggered.get(symbol) == now_chi.date():
+            state["signal_active"] = False
+            state["status"] = "TRIGGERED_PREVIOUSLY"
+            state["meta"]["reason"] = "Already triggered today"
+            if symbol in self._last_values:
+                state["values"].update(self._last_values[symbol])
+            return state
+
         try:
             p_start = get_price_at(start_utc)
             p_end   = get_price_at(end_utc)
-            
+
             if not p_start or not p_end or p_start <= 0:
                 state["status"] = "EXPIRED"
                 state["meta"]["reason"] = "Insufficient price data"
@@ -143,7 +151,7 @@ class FridayVolIndicator:
 
             pct = abs((p_end - p_start) / p_start) * 100.0
             direction = "UP" if p_end > p_start else "DOWN"
-            
+
             state["values"] = {
                 "p_start": p_start,
                 "p_end": p_end,
@@ -151,27 +159,18 @@ class FridayVolIndicator:
                 "direction": direction,
                 "threshold_met": pct >= self.cfg.percent_threshold
             }
-            
+
             # Check if signal should be active
             if pct >= self.cfg.percent_threshold:
-                # Only trigger once per Friday per symbol
-                if self._last_triggered.get(symbol) != now_chi.date():
-                    state["signal_active"] = True
-                    state["status"] = "TRIGGERED"
-                    self._last_triggered[symbol] = now_chi.date()
-                    self._last_values[symbol] = state["values"].copy()
-                else:
-                    state["signal_active"] = False
-                    state["status"] = "TRIGGERED_PREVIOUSLY"
-                    state["meta"]["reason"] = "Already triggered today"
-                    # Include previous values
-                    if symbol in self._last_values:
-                        state["values"].update(self._last_values[symbol])
+                state["signal_active"] = True
+                state["status"] = "TRIGGERED"
+                self._last_triggered[symbol] = now_chi.date()
+                self._last_values[symbol] = state["values"].copy()
             else:
                 state["signal_active"] = False
                 state["status"] = "EXPIRED"
                 state["meta"]["reason"] = f"Below threshold: {pct:.3f}% < {self.cfg.percent_threshold}%"
-                
+
         except Exception as e:
             state["status"] = "ERROR"
             state["meta"]["error"] = str(e)
@@ -202,4 +201,7 @@ class FridayVolIndicator:
         state = self.get_indicator_state(symbol, get_price_at, now_utc)
         if state.get("signal_active", False):
             return state.get("values", {}).get("pct_change")
+        # If not active, return last recorded value if triggered earlier today
+        if self._last_triggered.get(symbol) == self._current_chicago(now_utc).date():
+            return self._last_values.get(symbol, {}).get("pct_change")
         return None
