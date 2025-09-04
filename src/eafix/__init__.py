@@ -6,11 +6,12 @@ the package.
 """
 
 from . import conditional_signals, currency_strength, indicator_engine, signals
-from . import strength_feed, transport_integrations
+from . import economic_calendar, strength_feed, transport_integrations
 
 __all__ = [
     "conditional_signals",
     "currency_strength",
+    "economic_calendar",
     "indicator_engine",
     "signals",
     "strength_feed",
