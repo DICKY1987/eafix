@@ -1,4 +1,4 @@
-# Applications
+I I # Applications
 
 > User-facing applications: CLI tools, web service, and desktop interface.
 
