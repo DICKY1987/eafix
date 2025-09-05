@@ -1,0 +1,425 @@
+{
+  "test_signals": {
+    "valid_buy_signal": {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "symbol": "EURUSD",
+      "direction": "BUY",
+      "confidence": 0.85,
+      "timestamp": "2024-01-15T10:30:00Z",
+      "strategy_id": 12345,
+      "metadata": {
+        "rsi": 30.5,
+        "ema_cross": true,
+        "bollinger_position": "lower",
+        "volume": 1234567,
+        "spread": 1.2,
+        "news_impact": "low"
+      },
+      "expected_parameter_set": 1,
+      "expected_lot_size": 0.1,
+      "expected_stop_loss": 20,
+      "expected_take_profit": 40
+    },
+    
+    "valid_sell_signal": {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "symbol": "GBPUSD",
+      "direction": "SELL",
+      "confidence": 0.92,
+      "timestamp": "2024-01-15T14:15:00Z",
+      "strategy_id": 12346,
+      "metadata": {
+        "rsi": 75.2,
+        "ema_cross": false,
+        "bollinger_position": "upper",
+        "volume": 2345678,
+        "spread": 2.1,
+        "news_impact": "medium"
+      },
+      "expected_parameter_set": 2,
+      "expected_lot_size": 0.15,
+      "expected_stop_loss": 25,
+      "expected_take_profit": 50
+    },
+    
+    "high_confidence_signal": {
+      "id": "550e8400-e29b-41d4-a716-446655440003",
+      "symbol": "USDJPY",
+      "direction": "BUY",
+      "confidence": 0.95,
+      "timestamp": "2024-01-15T16:45:00Z",
+      "strategy_id": 12347,
+      "metadata": {
+        "rsi": 25.8,
+        "ema_cross": true,
+        "bollinger_position": "lower",
+        "volume": 3456789,
+        "spread": 0.8,
+        "news_impact": "low",
+        "support_level": 110.50,
+        "resistance_level": 112.00
+      },
+      "expected_parameter_set": 3,
+      "expected_lot_size": 0.2,
+      "expected_stop_loss": 15,
+      "expected_take_profit": 30
+    },
+    
+    "low_confidence_signal": {
+      "id": "550e8400-e29b-41d4-a716-446655440004",
+      "symbol": "AUDUSD",
+      "direction": "SELL",
+      "confidence": 0.55,
+      "timestamp": "2024-01-15T09:20:00Z",
+      "strategy_id": 12348,
+      "metadata": {
+        "rsi": 65.0,
+        "ema_cross": false,
+        "bollinger_position": "middle",
+        "volume": 876543,
+        "spread": 1.8,
+        "news_impact": "high"
+      },
+      "expected_parameter_set": 5,
+      "expected_lot_size": 0.05,
+      "expected_stop_loss": 30,
+      "expected_take_profit": 60
+    }
+  },
+  
+  "invalid_signals": {
+    "missing_required_field": {
+      "id": "550e8400-e29b-41d4-a716-446655440010",
+      "symbol": "EURUSD",
+      "direction": "BUY",
+      "timestamp": "2024-01-15T10:30:00Z",
+      "strategy_id": 12345,
+      "metadata": {},
+      "error_type": "missing_confidence"
+    },
+    
+    "invalid_direction": {
+      "id": "550e8400-e29b-41d4-a716-446655440011",
+      "symbol": "GBPUSD",
+      "direction": "INVALID",
+      "confidence": 0.85,
+      "timestamp": "2024-01-15T10:30:00Z",
+      "strategy_id": 12345,
+      "metadata": {},
+      "error_type": "invalid_direction"
+    },
+    
+    "invalid_confidence": {
+      "id": "550e8400-e29b-41d4-a716-446655440012",
+      "symbol": "USDJPY",
+      "direction": "BUY",
+      "confidence": 1.5,
+      "timestamp": "2024-01-15T10:30:00Z",
+      "strategy_id": 12345,
+      "metadata": {},
+      "error_type": "confidence_out_of_range"
+    },
+    
+    "invalid_symbol": {
+      "id": "550e8400-e29b-41d4-a716-446655440013",
+      "symbol": "INVALID",
+      "direction": "BUY",
+      "confidence": 0.85,
+      "timestamp": "2024-01-15T10:30:00Z",
+      "strategy_id": 12345,
+      "metadata": {},
+      "error_type": "invalid_symbol"
+    },
+    
+    "malformed_timestamp": {
+      "id": "550e8400-e29b-41d4-a716-446655440014",
+      "symbol": "EURUSD",
+      "direction": "BUY",
+      "confidence": 0.85,
+      "timestamp": "invalid-timestamp",
+      "strategy_id": 12345,
+      "metadata": {},
+      "error_type": "invalid_timestamp"
+    }
+  },
+  
+  "edge_case_signals": {
+    "minimum_confidence": {
+      "id": "550e8400-e29b-41d4-a716-446655440020",
+      "symbol": "EURUSD",
+      "direction": "BUY",
+      "confidence": 0.01,
+      "timestamp": "2024-01-15T10:30:00Z",
+      "strategy_id": 12345,
+      "metadata": {
+        "test_case": "minimum_confidence"
+      }
+    },
+    
+    "maximum_confidence": {
+      "id": "550e8400-e29b-41d4-a716-446655440021",
+      "symbol": "EURUSD",
+      "direction": "BUY",
+      "confidence": 1.0,
+      "timestamp": "2024-01-15T10:30:00Z",
+      "strategy_id": 12345,
+      "metadata": {
+        "test_case": "maximum_confidence"
+      }
+    },
+    
+    "empty_metadata": {
+      "id": "550e8400-e29b-41d4-a716-446655440022",
+      "symbol": "GBPUSD",
+      "direction": "SELL",
+      "confidence": 0.75,
+      "timestamp": "2024-01-15T10:30:00Z",
+      "strategy_id": 12346,
+      "metadata": {}
+    },
+    
+    "large_metadata": {
+      "id": "550e8400-e29b-41d4-a716-446655440023",
+      "symbol": "USDJPY",
+      "direction": "BUY",
+      "confidence": 0.80,
+      "timestamp": "2024-01-15T10:30:00Z",
+      "strategy_id": 12347,
+      "metadata": {
+        "rsi_1m": 45.2,
+        "rsi_5m": 48.7,
+        "rsi_15m": 52.1,
+        "rsi_1h": 55.8,
+        "rsi_4h": 58.9,
+        "rsi_1d": 62.3,
+        "ema_12": 1.0845,
+        "ema_26": 1.0839,
+        "ema_50": 1.0832,
+        "ema_200": 1.0798,
+        "bollinger_upper": 1.0865,
+        "bollinger_middle": 1.0845,
+        "bollinger_lower": 1.0825,
+        "macd_line": 0.0006,
+        "macd_signal": 0.0004,
+        "macd_histogram": 0.0002,
+        "volume_sma": 1250000,
+        "atr": 0.0025,
+        "support_levels": [1.0830, 1.0820, 1.0810],
+        "resistance_levels": [1.0860, 1.0870, 1.0880],
+        "news_events": [
+          {
+            "time": "2024-01-15T08:30:00Z",
+            "currency": "USD",
+            "impact": "medium",
+            "event": "Retail Sales"
+          }
+        ],
+        "correlations": {
+          "GBPUSD": 0.75,
+          "AUDUSD": 0.68,
+          "NZDUSD": 0.72
+        }
+      }
+    }
+  },
+  
+  "sequence_signals": {
+    "signal_sequence_1": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440030",
+        "symbol": "EURUSD",
+        "direction": "BUY",
+        "confidence": 0.85,
+        "timestamp": "2024-01-15T10:00:00Z",
+        "strategy_id": 12345,
+        "metadata": {"sequence": 1}
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440031",
+        "symbol": "EURUSD",
+        "direction": "SELL",
+        "confidence": 0.75,
+        "timestamp": "2024-01-15T10:15:00Z",
+        "strategy_id": 12345,
+        "metadata": {"sequence": 2}
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440032",
+        "symbol": "EURUSD",
+        "direction": "BUY",
+        "confidence": 0.90,
+        "timestamp": "2024-01-15T10:30:00Z",
+        "strategy_id": 12345,
+        "metadata": {"sequence": 3}
+      }
+    ],
+    
+    "rapid_fire_signals": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440040",
+        "symbol": "GBPUSD",
+        "direction": "BUY",
+        "confidence": 0.80,
+        "timestamp": "2024-01-15T11:00:00Z",
+        "strategy_id": 12346,
+        "metadata": {"rapid_fire": true, "sequence": 1}
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440041",
+        "symbol": "GBPUSD",
+        "direction": "BUY",
+        "confidence": 0.82,
+        "timestamp": "2024-01-15T11:00:05Z",
+        "strategy_id": 12346,
+        "metadata": {"rapid_fire": true, "sequence": 2}
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440042",
+        "symbol": "GBPUSD",
+        "direction": "BUY",
+        "confidence": 0.78,
+        "timestamp": "2024-01-15T11:00:10Z",
+        "strategy_id": 12346,
+        "metadata": {"rapid_fire": true, "sequence": 3}
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440043",
+        "symbol": "GBPUSD",
+        "direction": "SELL",
+        "confidence": 0.85,
+        "timestamp": "2024-01-15T11:00:15Z",
+        "strategy_id": 12346,
+        "metadata": {"rapid_fire": true, "sequence": 4}
+      }
+    ]
+  },
+  
+  "stress_test_signals": {
+    "high_volume_period": {
+      "description": "Signals generated during high market volatility",
+      "period": "2024-01-15T15:00:00Z to 2024-01-15T16:00:00Z",
+      "count": 50,
+      "base_signal": {
+        "symbol": "EURUSD",
+        "confidence": 0.75,
+        "strategy_id": 12345,
+        "metadata": {
+          "stress_test": true,
+          "market_condition": "high_volatility"
+        }
+      }
+    },
+    
+    "mixed_symbols_burst": {
+      "description": "Multiple symbols generating signals simultaneously",
+      "symbols": ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCHF"],
+      "signal_count_per_symbol": 10,
+      "time_window_minutes": 5,
+      "base_timestamp": "2024-01-15T12:00:00Z"
+    }
+  },
+  
+  "performance_test_signals": {
+    "latency_test": {
+      "signal_count": 1000,
+      "interval_ms": 100,
+      "start_time": "2024-01-15T09:00:00Z",
+      "symbols": ["EURUSD", "GBPUSD"],
+      "confidence_range": [0.6, 0.9],
+      "alternating_directions": true
+    },
+    
+    "throughput_test": {
+      "signal_count": 10000,
+      "burst_size": 100,
+      "burst_interval_ms": 1000,
+      "total_duration_minutes": 10,
+      "symbols": ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD"]
+    }
+  },
+  
+  "response_test_data": {
+    "expected_responses": {
+      "successful_trade": {
+        "signal_id": "550e8400-e29b-41d4-a716-446655440001",
+        "trade_id": "trade-12345-67890",
+        "status": "EXECUTED",
+        "execution_price": 1.0845,
+        "timestamp": "2024-01-15T10:30:05Z",
+        "slippage": 0.2,
+        "execution_time_ms": 150
+      },
+      
+      "rejected_trade": {
+        "signal_id": "550e8400-e29b-41d4-a716-446655440002",
+        "trade_id": null,
+        "status": "REJECTED",
+        "error_message": "Insufficient margin",
+        "timestamp": "2024-01-15T14:15:02Z",
+        "rejection_reason": "MARGIN_CHECK_FAILED"
+      },
+      
+      "timeout_trade": {
+        "signal_id": "550e8400-e29b-41d4-a716-446655440003",
+        "trade_id": null,
+        "status": "TIMEOUT",
+        "error_message": "Trade execution timeout",
+        "timestamp": "2024-01-15T16:45:30Z",
+        "timeout_duration_ms": 30000
+      }
+    }
+  },
+  
+  "test_configurations": {
+    "default_test_config": {
+      "signal_confidence_threshold": 0.7,
+      "max_signals_per_minute": 10,
+      "supported_symbols": ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD"],
+      "parameter_set_mapping": {
+        "12345": 1,
+        "12346": 2,
+        "12347": 3,
+        "12348": 4
+      },
+      "validation_rules": {
+        "required_fields": ["id", "symbol", "direction", "confidence", "timestamp", "strategy_id"],
+        "confidence_range": [0.0, 1.0],
+        "valid_directions": ["BUY", "SELL"],
+        "symbol_format": "^[A-Z]{6}$",
+        "timestamp_format": "ISO8601"
+      }
+    },
+    
+    "stress_test_config": {
+      "signal_confidence_threshold": 0.5,
+      "max_signals_per_minute": 1000,
+      "supported_symbols": ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCHF", "NZDUSD", "USDCAD"],
+      "timeout_ms": 5000,
+      "max_concurrent_trades": 50,
+      "memory_limit_mb": 512
+    }
+  },
+  
+  "metadata": {
+    "version": "1.0.0",
+    "created": "2024-01-15T00:00:00Z",
+    "description": "Test signal data for trading system validation and testing",
+    "total_signals": 50,
+    "signal_categories": [
+      "valid_signals",
+      "invalid_signals", 
+      "edge_case_signals",
+      "sequence_signals",
+      "stress_test_signals",
+      "performance_test_signals"
+    ],
+    "usage_notes": [
+      "Use valid_signals for basic functionality testing",
+      "Use invalid_signals to test error handling",
+      "Use edge_case_signals for boundary condition testing",
+      "Use sequence_signals for workflow testing",
+      "Use stress_test_signals for load testing",
+      "Use performance_test_signals for latency and throughput testing"
+    ]
+  }
+}
