@@ -25,6 +25,11 @@ class IndicatorEngine:
         self.ui_refresh_ms = ui_refresh_ms
         self._registry: Dict[str, List[object]] = {}
         self._last_perf_check = time.time()
+        # Track how many indicator updates occur between performance checks
+        self._updates_since_perf = 0
+        # Most recent performance metrics captured by :meth:`_maybe_perf_check`
+        # Consumers can inspect this dictionary for lightweight telemetry.
+        self.performance: Dict[str, float] = {}
 
     def add_indicator(self, symbol: str, indicator: object) -> None:
         lst = self._registry.setdefault(symbol, [])
@@ -34,6 +39,7 @@ class IndicatorEngine:
 
     def update(self, symbol: str, value: float) -> Dict[str, float]:
         outputs: Dict[str, float] = {}
+        self._updates_since_perf += 1
         for ind in self._registry.get(symbol, []):
             try:
                 out = ind.update(value)
@@ -46,10 +52,21 @@ class IndicatorEngine:
     # ------------------------------------------------------------------
     def _maybe_perf_check(self) -> None:
         now = time.time()
-        if (now - self._last_perf_check) * 1000 >= self.ui_refresh_ms:
+        elapsed_ms = (now - self._last_perf_check) * 1000
+        if elapsed_ms >= self.ui_refresh_ms:
+            # Record simple throughput metrics.  This deliberately avoids
+            # expensive operations to keep the engine lightweight.
+            if elapsed_ms:
+                rate = self._updates_since_perf / (elapsed_ms / 1000.0)
+            else:
+                rate = float("nan")
+            self.performance = {
+                "updates": self._updates_since_perf,
+                "elapsed_ms": elapsed_ms,
+                "updates_per_sec": rate,
+            }
+            self._updates_since_perf = 0
             self._last_perf_check = now
-            # Placeholder for future performance metrics
-            pass
 
 
 # Factory convenience ----------------------------------------------------------

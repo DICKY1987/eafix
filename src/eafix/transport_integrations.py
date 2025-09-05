@@ -112,6 +112,45 @@ class Transport(Protocol):
         ...
 
 
+class DummyTransport:
+    """In-memory transport implementation used for testing.
+
+    Parameters
+    ----------
+    should_fail:
+        When ``True`` the transport simulates a send failure and reports itself
+        as unhealthy.  This allows unit tests to exercise router failover logic.
+    """
+
+    def __init__(self, should_fail: bool = False):
+        self.should_fail = should_fail
+        self.sent: List[Dict] = []
+        self.metrics = TransportMetrics()
+
+    def connect(self) -> bool:  # pragma: no cover - no real connection needed
+        return True
+
+    def disconnect(self) -> None:  # pragma: no cover - nothing to clean up
+        pass
+
+    def send(self, message: Union[Message, Dict]) -> bool:
+        """Record message if healthy, otherwise simulate failure."""
+        if self.should_fail:
+            self.metrics.messages_failed += 1
+            return False
+
+        # Accept either Message objects or plain dictionaries
+        payload = message.to_dict() if isinstance(message, Message) else message
+        self.sent.append(payload)
+        self.metrics.messages_sent += 1
+        return True
+
+    def is_healthy(self) -> bool:
+        return not self.should_fail
+
+    def get_metrics(self) -> TransportMetrics:  # pragma: no cover - simple getter
+        return self.metrics
+
 class SocketTransport:
     """TCP Socket transport with 4-byte little-endian framing."""
 
@@ -525,7 +564,8 @@ class TriTransportRouter:
     active_transport: Optional[Transport] = field(default=None)
     _heartbeat_thread: Optional[threading.Thread] = field(default=None)
     _recovery_thread: Optional[threading.Thread] = field(default=None)
-    _running: bool = field(default=False)
+    # Allow simple use in tests without explicitly calling ``start``
+    _running: bool = field(default=True)
     
     def __post_init__(self):
         self.logger = logging.getLogger(__name__)
