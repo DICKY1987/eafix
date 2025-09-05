@@ -10,13 +10,22 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 
-from .dde_client import MT4DDEClient, DDEConnectionManager
-from .price_manager import PriceManager
-from .indicator_engine import IndicatorEngine, create_default_indicator_set
-from .ui_components import (
-    ConnectionStatusWidget, SymbolSelectorWidget, PriceGridWidget,
-    IndicatorPanelWidget, RealTimeChartWidget
-)
+try:
+    from .dde_client import MT4DDEClient, DDEConnectionManager
+    from .price_manager import PriceManager
+    from .indicator_engine import IndicatorEngine, create_default_indicator_set
+    from .ui_components import (
+        ConnectionStatusWidget, SymbolSelectorWidget, PriceGridWidget,
+        IndicatorPanelWidget, RealTimeChartWidget
+    )
+except ImportError:
+    from dde_client import MT4DDEClient, DDEConnectionManager
+    from price_manager import PriceManager
+    from indicator_engine import IndicatorEngine, create_default_indicator_set
+    from ui_components import (
+        ConnectionStatusWidget, SymbolSelectorWidget, PriceGridWidget,
+        IndicatorPanelWidget, RealTimeChartWidget
+    )
 
 
 class DDEPriceImportTab(ttk.Frame):
