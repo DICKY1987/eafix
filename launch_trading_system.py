@@ -11,10 +11,14 @@ from tkinter import messagebox, ttk
 from datetime import datetime
 import json
 
-# Add necessary paths
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'core'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'tabs'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'mt4_dde_interface', 'src'))
+# Add necessary paths  
+project_root = os.path.dirname(__file__)
+sys.path.insert(0, project_root)
+sys.path.insert(0, os.path.join(project_root, 'src'))
+sys.path.insert(0, os.path.join(project_root, 'src', 'eafix'))
+sys.path.insert(0, os.path.join(project_root, 'core'))
+sys.path.insert(0, os.path.join(project_root, 'tabs'))
+sys.path.insert(0, os.path.join(project_root, 'mt4_dde_interface', 'src'))
 
 def setup_logging():
     """Setup application logging"""

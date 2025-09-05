@@ -1,0 +1,48 @@
+{
+  "timestamp": "2025-09-04T19:07:55.647053",
+  "tests_run": 6,
+  "tests_passed": 6,
+  "tests_failed": 0,
+  "performance_metrics": {
+    "Conditional Signals Engine": {
+      "execution_time_ms": 747.9526996612549,
+      "passed": true
+    },
+    "Guardian Monitoring System": {
+      "execution_time_ms": 4593.788385391235,
+      "passed": true
+    },
+    "Transport Layer": {
+      "execution_time_ms": 10012.632608413696,
+      "passed": true
+    },
+    "DDE Integration": {
+      "execution_time_ms": 0.0,
+      "passed": true
+    },
+    "Database Persistence": {
+      "execution_time_ms": 2020.1385021209717,
+      "passed": true
+    },
+    "End-to-End Integration": {
+      "execution_time_ms": 7063.881397247314,
+      "passed": true
+    }
+  },
+  "errors": [],
+  "components_validated": [
+    "Conditional Signals Engine",
+    "Guardian Monitoring System",
+    "Transport Layer",
+    "DDE Integration",
+    "Database Persistence",
+    "End-to-End Integration"
+  ],
+  "success_rate": 100.0,
+  "overall_status": "PASS",
+  "performance_summary": {
+    "total_execution_time_ms": 24438.393592834473,
+    "average_test_time_ms": 4073.0655988057456,
+    "slowest_component": "Transport Layer"
+  }
+}

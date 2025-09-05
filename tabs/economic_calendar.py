@@ -627,8 +627,10 @@ class EconomicCalendar:
         """Show context menu on right-click"""
         try:
             self.context_menu.post(event.x_root, event.y_root)
-        except:
-            pass
+        except tk.TclError as e:
+            logger.debug(f"Context menu display error: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error showing context menu: {e}")
     
     def on_event_double_click(self, event):
         """Handle double-click on event"""

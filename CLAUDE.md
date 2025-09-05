@@ -4,165 +4,235 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a trading system development repository containing Python-based trading tools, MetaTrader 4 Expert Advisors, and economic calendar processing utilities. The system includes placeholder trading infrastructure to enable early-stage pipeline development without requiring real trading infrastructure.
+This is a comprehensive trading system with dual architecture combining traditional trading tools with the Atomic Process Framework (APF). It includes MetaTrader 4 integration, signal processing, constraint-based protection systems, and a unified desktop interface.
 
-**Architecture**: Multi-component system with MQL4 Expert Advisors, Python interfaces, and database management
-**Focus**: Development tools and testing frameworks for algorithmic trading systems
+**Architecture**: Hybrid system with legacy trading components and modern APF integration
+**Focus**: Production trading system with Excel-like GUI, Guardian protection, and comprehensive analysis tools
 
 ## Key Development Commands
 
-### Python Development
+### Main Application Launch
 ```bash
-# Navigate to repository
-cd eafix
+# Primary system launcher (unified Excel-like interface)
+python launch_trading_system.py
 
-# Install dependencies for MT4 DDE interface
-cd mt4_dde_interface
-pip install -r requirements.txt
+# APF desktop application
+python -m eafix.apps.desktop.main
 
-# Main application entry points
-cd mt4_dde_interface
-python run_application.py              # Main MT4 DDE interface application
-
-# Economic calendar processing
-cd "Economic calendar"
-python simple_runner.py               # Basic economic calendar runner
-
-# Database operations
-python -c "from core.database_manager import DatabaseManager; db = DatabaseManager(); db.initialize_database()"
+# Alternative launcher scripts
+launch_gui.bat    # Windows
+launch_gui.sh     # Unix/Linux
 ```
 
 ### Testing Framework
 ```bash
-# Run main test suite
+# Main test suite (pytest configured with src/ pythonpath)
 pytest -q
 
-# Run specific test modules
-pytest tests/test_calendar_processing.py
-pytest tests/test_constraint_repository.py
-pytest tests/test_friday_vol_indicator.py
+# Run specific test categories
+pytest tests/test_friday_vol_signal.py
+pytest tests/test_currency_strength.py
+pytest tests/test_conditional_signals.py
+pytest tests/test_economic_calendar.py
 
-# Run MT4 DDE interface tests
-cd mt4_dde_interface/tests
-python run_all_tests.py
-
-# Individual MT4 DDE tests
-python -m pytest test_dde_connection.py
-python -m pytest test_currency_strength.py
-python -m pytest test_indicators.py
+# Run tests with full output
+pytest -v tests/
 ```
 
-### MQL4 Expert Advisor Development
+### Trading Tools and Analysis
 ```bash
-# Main EA files for MetaTrader 4 compilation
-# Use MetaEditor: File → Compile (F7)
-# Source files:
-# - HUEY_P_EA_ExecutionEngine_8.mq4
-# - HUEY_P_EA_ThreeTier_Comm.mq4
+# Comprehensive trading framework analysis (run from root directory)
+python tools/trading_framework_scan.py      # Scan system for issues
+python tools/detect_trading_issues.py       # Detect configuration problems
+python tools/run_trading_validation.py      # Validate trading setup
+python tools/compute_trading_metrics.py     # Calculate system metrics
+python tools/apply_trading_patch.py         # Apply fixes and patches
+python tools/map_trading_remediations.py    # Map remediation strategies
+python tools/make_trading_diff.py           # Generate trading system diffs
+
+# Results are saved to *_results.json files in root directory
 ```
 
-### Trading Tools Validation
+### APF Commands
 ```bash
-# Apply trading patches and validate configurations
-cd tools
-python apply_trading_patch.py
-python run_trading_validation.py
+# APF CLI operations
+python -m eafix.apps.cli.apf export   # Export process definitions
+python -m eafix.apps.cli.apf validate # Validate process schemas
+python -m eafix.apps.cli.apf seq      # Sequence management
 ```
 
 ## Architecture Overview
 
-### Core Components
+### Dual Architecture System
 
-**Python Core** (`core/` directory)
-- **AppController** (`app_controller.py`): Main application orchestration with tkinter GUI
-- **DatabaseManager** (`database_manager.py`): SQLite database operations and schema management
-- **EAConnector** (`ea_connector.py`): Communication interface with MetaTrader Expert Advisors
-- **DataModels** (`data_models.py`): Type-safe data structures for trading data
-- **ConstraintRepository** (`constraint_repository.py`): Trading constraint management system
+**Legacy Trading System** (Root level)
+- **Core Components** (`core/`): AppController, DatabaseManager, EAConnector, ConstraintRepository
+- **Tab System** (`tabs/`): Modular GUI tabs for trading functions
+- **MT4 Integration** (`mt4_dde_interface/`): Direct MetaTrader 4 communication
+- **Main Launcher** (`launch_trading_system.py`): Unified Excel-like interface entry point
 
-**MT4 DDE Interface** (`mt4_dde_interface/` directory)
-- **Main Application** (`run_application.py`): Primary interface for MT4 DDE communication
-- **Currency Strength** (`src/currency_strength.py`): Currency strength analysis tools  
-- **Indicators** (`src/indicators.py`): Technical indicator calculations
-- **DDE Connection** (`src/dde_connection.py`): Dynamic Data Exchange with MetaTrader
+**APF Integration** (`src/eafix/`)
+- **Modern Package Structure**: Standard Python package with proper imports
+- **Guardian System** (`src/eafix/guardian/`): Multi-agent constraint protection
+- **Process Framework** (`src/eafix/apps/`): CLI, desktop, and service applications
+- **Signal Processing** (`src/eafix/signals/`): Advanced trading signals
+- **Indicators** (`src/eafix/indicators/`): Technical analysis components
 
-**Tab-Based GUI** (`tabs/` directory)
-- Modular tab system for different trading functionalities
-- Live dashboard, trade history, system status, settings, and economic calendar tabs
+### Key Components
+
+**Unified Interface System**
+- **launch_trading_system.py**: Main entry point with Excel-like tabbed GUI
+- **AppController** (`core/app_controller.py`): Core application orchestration
+- **Tab Architecture**: Dashboard, Live Trading, Price Feed, History, Status, Tools, Calendar, Settings
+
+**Guardian Protection System** (`src/eafix/guardian/`)
+- **Multi-Agent Architecture**: Risk, Market, System, Compliance, Execution, Learning agents
+- **Constraint Engine**: DSL-based trading constraints with repository management
+- **Gate System**: Broker connectivity, market quality, risk management, system health gates
+- **Monitoring**: Real-time trading system monitoring with health checks
+
+**Signal & Indicator Engine**
+- **Friday Vol Signal** (`src/eafix/signals/friday_vol_signal.py`): Volatility-based trading signals
+- **Currency Strength** (`src/eafix/currency_strength.py`): Multi-currency strength analysis
+- **Conditional Signals** (`src/eafix/conditional_signals.py`): Logic-based signal generation
+- **Technical Indicators** (`src/eafix/indicators/`): RSI, MACD, Stochastic, Z-Score strength indicators
 
 ### Database Architecture
-- **SQLite-based**: Local database with automated schema management
-- **Backup System**: Automated database backups with timestamp naming
-- **Core Tables**: trades, signals, system_status, configuration, audit_logs
+- **Multi-Database System**: trading_system.db, huey_project_organizer.db
+- **Automated Backups**: Timestamped backup files with versioning
+- **Guardian Schema**: Advanced constraint and monitoring tables
+- **APF Integration**: Process state management and audit trails
 
-### Testing Framework
-- **pytest**: Main testing framework with comprehensive test coverage
-- **Component Tests**: Individual module testing for core components
-- **Integration Tests**: Full system validation tests
-- **MT4 Interface Tests**: Specialized tests for MetaTrader integration
+### Testing Architecture
+- **Pytest Configuration**: `pytest.ini` with src/ pythonpath
+- **Dual Import Support**: Tests work with both package imports and direct imports
+- **Comprehensive Coverage**: Trading signals, currency strength, economic calendar, UI components
+- **APF Tests**: Process framework, guardian system, constraint validation
 
-## Development Guidelines
+## Development Patterns
 
-### Python Development
-- **Dependencies**: Install from `mt4_dde_interface/requirements.txt`
-- **Core Dependencies**: pywin32, numpy, pandas, matplotlib, seaborn, asyncio-mqtt
-- **GUI Framework**: tkinter with ttk styling
-- **Database**: SQLite with connection pooling and validation
+### Import Patterns
+```python
+# APF package imports (preferred)
+from eafix.signals import FridayVolSignal
+from eafix.guardian.constraints import ConstraintRepository
 
-### MQL4 Development
-- **Compilation**: Use MetaTrader 4 MetaEditor (F7 or Ctrl+F7)
-- **Syntax**: MQL4 only - no MQL5 functions or structures
-- **Testing**: Use MetaTrader Strategy Tester for backtesting
+# Legacy direct imports (fallback)
+from signals.friday_vol_signal import FridayVolSignal
+from core.constraint_repository import ConstraintRepository
+```
+
+### Configuration Files
+```bash
+# Core configuration
+settings.json                    # Main application settings (trading signals, DDE, UI)
+pytest.ini                      # Test configuration with pythonpath
+launch_gui.bat / launch_gui.sh   # Platform-specific launcher scripts
+
+# Dependencies
+mt4_dde_interface/requirements.txt   # Python dependencies (pywin32, numpy, pandas, matplotlib, etc.)
+
+# Trading analysis results (auto-generated)
+scan_results.json               # System scan results
+issues_results.json             # Detected issues
+validation_results.json         # Validation status
+metrics_results.json            # Performance metrics
+remediation_results.json        # Remediation actions
+production_validation_*.log     # Production validation logs
+```
 
 ### File Structure Patterns
 ```
-core/                   # Business logic and core components
-tabs/                   # GUI tab components
-mt4_dde_interface/      # MT4 Dynamic Data Exchange interface
-tests/                  # Test suite
-tools/                  # Utility scripts and trading tools
-indicators/             # Technical indicator implementations
-signals/                # Trading signal processing
-Database/               # SQLite databases and backups
+Root Level (Legacy)              # Original trading system components
+├── core/                       # Core business logic
+├── tabs/                       # GUI tab components  
+├── mt4_dde_interface/         # MT4 DDE integration
+├── launch_trading_system.py   # Main unified launcher
+
+src/eafix/ (APF)               # Modern package structure
+├── apps/                      # CLI, desktop, service apps
+├── guardian/                  # Protection system
+├── signals/                   # Trading signals
+├── indicators/                # Technical indicators
+└── packages/                  # APF core packages
+
+tests/                         # Unified test suite
+tools/                         # Analysis and validation tools
+docs/                          # Comprehensive documentation
 ```
 
-## Key Configuration Files
+## Guardian System Operations
 
-### Dependencies
-- `mt4_dde_interface/requirements.txt` - Python package dependencies
+### Constraint Management
+```python
+# Guardian constraint operations
+from eafix.guardian.constraints import ConstraintRepository, ConstraintDSL
 
-### Database Files
-- `trading_system.db` - Main trading database
-- `trading_system.backup_*.db` - Automated database backups
-- `huey_project_organizer.db` - Project organization database
+# Agent operations
+from eafix.guardian.agents import (
+    RiskAgent, MarketAgent, SystemAgent, 
+    ComplianceAgent, ExecutionAgent, LearningAgent
+)
+```
 
-### Configuration Files
-- `repo_ingester.config.json` - Repository ingestion configuration
-- `repo_ingester.config.yaml` - Alternative YAML configuration format
+### Gate System
+- **Broker Connectivity Gate**: Connection health and failover
+- **Market Quality Gate**: Spread, volume, volatility validation
+- **Risk Management Gate**: Position limits, exposure controls
+- **System Health Gate**: Performance, memory, connectivity monitoring
 
-## Testing and Validation
+## Trading System Launch Sequence
 
-### Test Categories
-1. **Core Component Tests**: Database, constraints, data models
-2. **UI Component Tests**: Tab functionality and indicator validation  
-3. **MT4 Interface Tests**: DDE connection, currency strength, indicators
-4. **Integration Tests**: Full system workflow validation
-5. **Trading Tool Tests**: Patch application and validation tools
+1. **Dependency Check**: Validates required and optional modules
+2. **Configuration Load**: Loads settings.json and application config
+3. **Database Initialization**: Connects to trading databases
+4. **Guardian Startup**: Initializes constraint repository and agents
+5. **GUI Creation**: Launches unified Excel-like interface
+6. **Tab Registration**: Creates Dashboard, Trading, Feed, History, Status, Tools, Calendar, Settings
+7. **Background Services**: Starts update threads and monitoring systems
 
-### Test Execution
-- **Primary Command**: `pytest -q` for main test suite
-- **Specific Tests**: Target individual test files with `pytest tests/test_*.py`
-- **MT4 Tests**: Run from `mt4_dde_interface/tests/` directory
+## MetaTrader 4 Integration
 
-## External Dependencies
+### Expert Advisors
+- **HUEY_P_EA_ExecutionEngine_8.mq4**: Main execution engine
+- **HUEY_P_EA_ThreeTier_Comm.mq4**: Communication layer
+- **Compilation**: Use MetaTrader MetaEditor (F7)
 
-### Required Components
-- **Python 3.8+**: Core runtime environment
-- **MetaTrader 4**: For MQL4 Expert Advisor execution (optional for development)
-- **Windows**: Required for pywin32 DDE functionality
+### DDE Interface
+- **launch_gui.bat/sh**: Auto-launches MT4 if `terminal.exe` found
+- **Environment Variable**: `MT4_PATH` for custom MT4 installation path
+- **Fallback Paths**: Common Windows MT4 installation locations
 
-### Optional Components
-- **SQLite Browser**: For database inspection and management
-- **MetaTrader Strategy Tester**: For EA backtesting and validation
+## Production Validation
 
-This repository provides a comprehensive development environment for algorithmic trading systems with focus on testing, validation, and modular architecture. The placeholder trading infrastructure enables development without requiring live trading connections.
+### System Validation
+```bash
+# Run comprehensive production validation
+python production_validation.py
+
+# Output files:
+# - production_validation_YYYYMMDD_HHMMSS.log
+# - validation_results_YYYYMMDD_HHMMSS.json
+```
+
+### Database Management
+- **SQLite databases**: trading_system.db, huey_project_organizer.db, e2e_trading.db, e2e_guardian.db
+- **Automatic backups**: Generated with timestamp suffixes
+- **Database validation**: Included in production validation scripts
+
+## Development Dependencies
+
+### Python Requirements
+- **pywin32>=306**: Windows API integration for DDE
+- **numpy>=1.24.0**: Numerical computations for trading algorithms
+- **pandas>=2.0.0**: Data analysis and manipulation
+- **matplotlib>=3.7.0**: Chart generation and visualization
+- **seaborn>=0.12.0**: Statistical data visualization
+- **asyncio-mqtt>=0.13.0**: Asynchronous MQTT client
+
+### Development Tools
+- **pytest**: Testing framework with custom configuration
+- **sqlite3**: Database operations and validation
+- **tkinter**: GUI framework for desktop interface
+
+This system provides a production-ready trading environment with comprehensive protection, analysis, and monitoring capabilities through the Guardian system and APF integration.
