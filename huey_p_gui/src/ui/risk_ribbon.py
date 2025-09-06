@@ -17,7 +17,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from core.event_bus import event_bus
 from core.state_manager import state_manager, RiskMetrics, ConnectivityStatus
 from themes.colors import ColorPalette, get_risk_color, interpolate_color
-from ui.modern_widgets import ModernFrame, ModernButton, ModernLabel, RiskMeter
+from ui.modern_widgets import (
+    ModernFrame,
+    ModernButton,
+    ModernLabel,
+    RiskMeter,
+    CTK_AVAILABLE,
+)
 
 class ConnectionIndicator:
     """Visual indicator for DDE connection status"""
@@ -87,13 +93,12 @@ class ConnectionIndicator:
             if conn_status.connection_quality != "unknown":
                 status_text += f" ({conn_status.connection_quality})"
             
-            self.status_label.configure(text=status_text)
-            
-            # Update symbol count
-            symbol_text = f"{conn_status.symbol_count} symbol{'s' if conn_status.symbol_count != 1 else ''}"
-            self.symbol_label.configure(text=symbol_text)
-            
-            # Color coding for status text
+            # Update symbol count and determine color coding
+            symbol_text = (
+                f"{conn_status.symbol_count} symbol"
+                f"{'s' if conn_status.symbol_count != 1 else ''}"
+            )
+
             if conn_status.dde_connected:
                 if conn_status.connection_quality == "excellent":
                     color = ColorPalette.SUCCESS
@@ -103,6 +108,19 @@ class ConnectionIndicator:
                     color = ColorPalette.WARNING
             else:
                 color = ColorPalette.DANGER
+
+            # Apply text updates with proper color tokens
+            self.status_label.configure(text=status_text)
+            self.symbol_label.configure(text=symbol_text)
+            try:
+                if CTK_AVAILABLE:
+                    self.status_label.configure(text_color=color)
+                    self.symbol_label.configure(text_color=color)
+                else:
+                    self.status_label.configure(foreground=color)
+                    self.symbol_label.configure(foreground=color)
+            except Exception:
+                pass  # Fallback silently if widget doesn't support color update
             
             # Schedule next update
             if self.update_timer:
