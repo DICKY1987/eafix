@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CalendarEvent",
+  "type": "object",
+  "properties": {
+    "id": {"type": "string"},
+    "start_ts": {"type": "string", "format": "date-time"},
+    "currency": {"type": "string"},
+    "impact": {"type": "string"},
+    "description": {"type": "string"}
+  },
+  "required": ["id", "start_ts", "currency", "impact"],
+  "additionalProperties": false
+}

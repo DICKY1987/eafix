@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OrderIntent",
+  "type": "object",
+  "properties": {
+    "id": {"type": "string"},
+    "symbol": {"type": "string"},
+    "side": {"type": "string", "enum": ["BUY", "SELL"]},
+    "quantity": {"type": "number"},
+    "stop_loss": {"type": "number"},
+    "take_profit": {"type": "number"},
+    "timeInForce": {"type": "string"}
+  },
+  "required": ["id", "symbol", "side", "quantity"],
+  "additionalProperties": false
+}

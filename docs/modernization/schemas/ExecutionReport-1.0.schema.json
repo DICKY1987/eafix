@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecutionReport",
+  "type": "object",
+  "properties": {
+    "order_id": {"type": "string"},
+    "broker_order_id": {"type": "string"},
+    "status": {"type": "string"},
+    "filled_qty": {"type": "number"},
+    "avg_price": {"type": "number"},
+    "timestamp": {"type": "string", "format": "date-time"}
+  },
+  "required": ["order_id", "status", "filled_qty", "timestamp"],
+  "additionalProperties": false
+}

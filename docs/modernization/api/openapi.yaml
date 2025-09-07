@@ -1,0 +1,37 @@
+openapi: 3.0.0
+info:
+  title: eafix modernization API
+  version: "0.1.0"
+paths:
+  /position:
+    post:
+      summary: Evaluate signal and produce order intent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/Signal-1.0.schema.json'
+      responses:
+        '200':
+          description: Order intent response
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/OrderIntent-1.2.schema.json'
+  /orders:
+    post:
+      summary: Submit order intent for execution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/OrderIntent-1.2.schema.json'
+      responses:
+        '200':
+          description: Execution report
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/ExecutionReport-1.0.schema.json'
