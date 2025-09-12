@@ -1,0 +1,42 @@
+---
+# Pre-commit configuration for CLI Multi Rapid Development
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+        description: Ensures files are either empty or end with one newline
+      - id: trailing-whitespace
+        description: Trims trailing whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: check-yaml
+        description: Checks yaml files for parseable syntax
+        exclude: ^helm/
+      - id: check-json
+        description: Checks json files for parseable syntax
+      - id: check-merge-conflict
+        description: Checks for files that contain merge conflict strings
+      - id: check-added-large-files
+        description: Prevents giant files from being committed
+        args: ['--maxkb=1000']
+
+# Disabled yamllint temporarily due to line ending issues
+#  - repo: https://github.com/adrienverge/yamllint
+#    rev: v1.35.1
+#    hooks:
+#      - id: yamllint
+#        description: Lint YAML files
+#        args: [--format, parsable, -c, .yamllint.yml]
+
+  - repo: local
+    hooks:
+      - id: docker-compose-check
+        name: docker-compose-check
+        description: Validate Docker Compose syntax
+        entry: docker compose config -q
+        language: system
+        files: ^(compose\.ya?ml|docker-compose\.ya?ml)$
+        pass_filenames: false
